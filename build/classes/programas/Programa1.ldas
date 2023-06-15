@@ -1,0 +1,18 @@
+Inicio pruba{
+   metodo suma (){
+       ent y =5;
+       ent x = 10; 
+       texto nombre = "David";
+       char nombre1 = '5';
+
+       si(x==y){
+          mensaje (nombre);
+       }sino{
+          mensaje (nombre);
+       }
+
+       mientras (x==10){
+         x=66;
+       }
+   }
+}
