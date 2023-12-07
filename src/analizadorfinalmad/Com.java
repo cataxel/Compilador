@@ -22,25 +22,25 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.Stack;
-import javax.swing.JTextPane;
+import java.util.Vector;
 import javax.swing.Timer;
 import javax.swing.table.DefaultTableModel;
-import javax.swing.text.AttributeSet;
 import javax.swing.text.BadLocationException;
-import javax.swing.text.DefaultStyledDocument;
-import javax.swing.text.StyleConstants;
-import javax.swing.text.StyleContext;
 import javax.swing.text.StyledDocument;
 
 public class Com extends javax.swing.JFrame {
 
     private Directory directorio;
     //Cosas
-    private ArrayList<Token> tokens;
-    java.util.Stack<String> pila = new java.util.Stack<String>();
-    java.util.Stack<String> pilaaux = new java.util.Stack<>(); //Pila auxiliar
-    int renglones = 0, columnas = 0;
+    Stack<String> pilaSintactica = new Stack<>();
     private DefaultTableModel modeloTabla;
+    int estadoSintactico, posicionEntrada;
+    int eliminacionProduccion[] = {0,6,12,0,6,0,10,8,8,8,8,0,18,4,2,6,2,2,2,2,4,4,4,6,6,6,6,6,6,0,6,6,0,4,6,0,6,6,0,4,6,6,0,2,2,2,6,2,2,2};
+    Token token;
+    Vector<String> tokenEsperados = new Vector<>(1,1);
+    boolean banProduccion = false;
+    String estadoPila = "", errorMsg = "";
+    String produccionTerminal[] = {"programa'", "programa", "declaracion", "declaracion", "sig_declaracion", "sig_declaracion", "bloque", "bloque", "bloque", "bloque", "bloque", "bloque", "for_expresion", "incremento", "inc", "sentencias", "tipo", "tipo", "tipo", "tipo", "expresion", "expresion", "R", "R'", "R'", "R'", "R'", "R'", "R'", "R'", "L", "L", "L", "Exp", "Exp", "Exp", "E'", "E'", "E'", "Term", "T'", "T'", "T'", "Factor", "Factor", "Factor", "Factor", "Factor", "Factor", "inc"};
     //Variables que uso para contar cosas NO SON MUY NECESARIAS
 
     private String title;
@@ -49,33 +49,125 @@ public class Com extends javax.swing.JFrame {
     int variable = 1;
     int errorFlag = 0; // Bandera para marcar la presencia de errores
     Boolean banP = true; //Bandera para ver si ya se inicio la Pila
-
-    String encabezadosRenglones[] = {"prog", "dec", "sigid", "modulos", "argumentos", "lista_argumentos", "sentencias", "else", "tipo", "leer", "L", "L'", "R", "R'", "E", "E'", "T", "T'", "F","$"};
-    String encabezadosColumnas[] = {"Inicio", "id","num", "(",")","litCad","litCar","+","-","*","/","=","<",">","<=","@","%","!=", "#","verdadero","falso","si","sino","hacer","mientras","para","mensaje","lectura","llamar","{","}","ent","texto","flot","dbl", "char", "bool",",","metodo", "?",";","ERROR","$","\""};
+    
+    String encabezadosColumnas[] = {".","var",";",",","=","if","for","!","{","}","(",")","&&","||","<",">","<=",">=","!=","==","+","-","*","/","VERDADERO","FALSO","id","num","char","Entero","Flotante","Char","Bool","read","print","$","programa","declaracion","sig_declaracion","bloque","for_expresion","incremento","tipo","expresion","sentencia","R","L","R’","Exp","E","Term","T","Factor"};
     
     // Tabla de respaldo por si se desmadra
-    String matriz[][] = {
-        //{                             "Inico" 0,                                      "id",1                           "num",2	   "(",3	   ")"4		"litCad",5          "litcar",6	     "+",7		 "-", 8		     "*",9		 "/",10 	 "=",11 	    "<",12	      ">",13	        "<=", 14        "@",15	        "%",16          "!=",17       "#",18           "verdadero",19   "falso",21      "si",21                                         "sino",22                    "hacer",23                                                     "mientras",24                                    "para",25                                      "mensaje",26                        "lectura",27                "llamar",28             "{",29               "}",30         "ent",31                	"texto",32                          "flot",33                       "dbl",34                        "char",35                           "bool",36                       ",",37              "metodo",38                                         "?",39         ";",40            "ERROR",41                                   "$",41                      "" "42;   
-        /*prog                    0*/{"Inicio id { dec modulos sentencias } ",          "saltar ",                      "saltar ",        "saltar ",      "saltar ",     "saltar ",         "saltar ",       "saltar ",          "saltar ",          "saltar ",         "saltar ",       "saltar ",         "saltar ",       "saltar ",         "saltar ",       "saltar ",     "saltar ",      "saltar ",     "saltar ",      "saltar ",       "saltar ",      "saltar ",                                      "saltar ",                  "saltar ",                                                     "saltar ",                                        "saltar ",                                     "saltar ",                          "saltar ",                  "saltar ",              "saltar ",          "saltar ",	"saltar ",                      "saltar ",                          "saltar ",                      "saltar ",                      "saltar ",                          "saltar ",                      "saltar ",                          "saltar ",                                          "saltar ",	"saltar ",       "saltar ",                   "sacar ",                   "sacar "},
-        /*dec                     1*/{"saltar ",                                        "0 ",                           "saltar ",        "saltar ",      "saltar ",     "saltar ",         "saltar ",       "saltar ",          "saltar ",          "saltar ",         "saltar ",       "saltar ",         "saltar ",       "saltar ",         "saltar ",       "saltar ",     "saltar ",      "saltar ",     "saltar ",      "saltar ",       "saltar ",      "0 ",                                           "saltar ",                  "0 ",                                                          "0 ",                                             "0 ",                                          "0 ",                               "saltar ",                  "0 ",                   "saltar ",          "0 ",           "ent id sigid ; dec ",          "texto id sigid ; dec ",            "flot id sigid ; dec ",         "dbl id sigid ; dec ",          "char id sigid ; dec ",             "bool id sigid ; dec ",         "saltar",                           "0 ",                                               "saltar",	"saltar ",	 "saltar ",                   "0 ",                       "sacar "},
-        /*sigid                   2*/{"saltar ",                                        "saltar ",                      "saltar ",        "saltar ",      "saltar ",     "saltar ",         "saltar ",       "saltar ",          "saltar ",          "saltar ",         "saltar ",       "= L sigid ",      "saltar ",       "saltar ",         "saltar ",       "saltar ",     "saltar ",      "saltar ",     "saltar ",      "saltar ",       "saltar ",      "sacar ",                                       "saltar ",                  "sacar ",                                                      "sacar ",                                         "sacar ",                                      "sacar ",                           "sacar ",                   "saltar ",              "saltar ",          "saltar ",      "0 ",                           "0 ",                               "0 ",                           "0 ",                           "0 ",                               "0 ",                           ", id siglist ",                    "saltar ",                                          "saltar ",	"0 ",	         "saltar ",                   "sacar ",                   "sacar "},
-        /*modulos                 3*/{"saltar ",                                        "0 ",                           "saltar ",        "saltar ",      "saltar ",     "saltar ",         "saltar ",       "saltar ",          "saltar ",          "saltar ",         "saltar ",       "saltar ",         "saltar ",       "saltar ",         "saltar ",       "saltar ",     "saltar ",      "saltar ",     "saltar ",      "saltar ",       "saltar ",      "saltar ",                                      "saltar ",                  "0 ",                                                          "0 ",                                             "0 ",                                          "0 ",                               "0 ",                       "0 ",                   "saltar ",          "0 ",           "0 ",                           "0 ",                               "0 ",                           "0 ",                           "0 ",                               "0 ",                           "saltar ",                          "metodo id ( argumentos ) { dec sentencias } ",	"saltar ",	"saltar ",	 "saltar ",                   "0 ",                       "sacar "},
-        /*argumentos              4*/{"saltar ",                                        "0 ",                           "saltar ",        "saltar ",      "0 ",          "saltar ",         "saltar ",       "saltar ",          "saltar ",          "saltar ",         "saltar ",       "saltar ",         "saltar ",       "saltar ",         "saltar ",       "saltar ",     "saltar ",      "saltar ",     "saltar ",      "saltar ",       "saltar ",      "saltar ",                                      "saltar ",                  "saltar ",                                                     "saltar ",                                        "saltar ",                                     "saltar ",                          "saltar ",                  "saltar ",              "sacar ",          "saltar ",	"ent id lista_argumentos ",	"texto id lista_argumentos ",       "flot id lista_argumentos ",    "dbl id lista_argumentos ",     "char id lista_argumentos ",	"bool id lista_argumentos ",	"saltar ",                          "saltar ",                                          "saltar ",	"saltar ",	 "saltar ",                   "sacar ",                   "sacar "},
-        /*lista_argumentos        5*/{"saltar ",                                        "saltar ",                      "saltar ",        "saltar ",      "0 ",          "saltar ",         "saltar ",       "saltar ",          "saltar ",          "saltar ",         "saltar ",       "saltar ",         "saltar ",       "saltar ",         "saltar ",       "saltar ",     "saltar ",      "saltar ",     "saltar ",      "saltar ",       "saltar ",      "saltar ",                                      "saltar ",                  "saltar ",                                                     "saltar ",                                        "saltar ",                                     "saltar ",                          "saltar ",                  "saltar ",              "saltar ",          "saltar ",	"saltar ",                      "saltar ",                          "saltar ",                      "saltar ",                      "saltar ",                          "saltar ",                      ", tipo id lista_argumentos ",      "saltar ",                                          "saltar ",	"saltar ",	 "saltar ",                   "0 ",                       "sacar "},
-        /*semtencias              6*/{"saltar ",                                        "id = leer L ; sentencias ",    "saltar ",        "saltar ",      "saltar ",     "saltar ",         "saltar ",       "saltar ",          "saltar ",          "saltar ",         "saltar ",       "saltar ",         "saltar ",       "saltar ",         "saltar ",       "saltar ",     "saltar ",      "saltar ",     "saltar ",      "saltar ",       "saltar ",      "si ( L ) { sentencias } else sentencias ",     "saltar ",                  "hacer { sentencias } mientras ( L ) ; sentencias ",           "mientras ( L ) { sentencias } sentencias ",      "para ( L ) { sentencias } sentencias ",       "mensaje ( L ) ; sentencias ",	"saltar ",                  "saltar ",              "saltar ",          "0 ",           "saltar ",                      "saltar ",                          "saltar ",                      "saltar ",                      "saltar ",                          "saltar ",                      "saltar ",                          "saltar ",                                          "saltar ",	"saltar ",	 "saltar ",                   "0 ",                       "sacar "},
-        /*else                    7*/{"saltar ",                                        "0 ",                           "saltar ",        "saltar ",      "saltar ",     "saltar ",         "saltar ",       "saltar ",          "saltar ",          "saltar ",         "saltar ",       "saltar ",         "saltar ",       "saltar ",         "saltar ",       "saltar ",     "saltar ",      "saltar ",     "saltar ",      "saltar ",       "saltar ",      "0 ",                                           "sino { sentencias } ",     "0 ",                                                          "0 ",                                             "0 ",                                          "0 ",                               "saltar ",                  "saltar ",              "saltar ",          "0 ",           "saltar ",                      "saltar ",                          "saltar ",                      "saltar ",                      "saltar ",                          "saltar ",                      "saltar ",                          "saltar ",                                          "saltar ",	"saltar ",	 "saltar ",                   "sacar ",                   "sacar "},
-        /*tipo                    8*/{"saltar ",                                        "saltar ",                      "saltar ",        "saltar ",      "saltar ",     "saltar ",         "saltar ",       "saltar ",          "saltar ",          "saltar ",         "saltar ",       "saltar ",         "saltar ",       "saltar ",         "saltar ",       "saltar ",     "saltar ",      "saltar ",     "saltar ",      "saltar ",       "saltar ",      "saltar ",                                      "saltar ",                  "saltar ",                                                     "saltar ",                                        "saltar ",                                     "saltar ",                          "saltar ",                  "saltar ",              "saltar ",          "saltar ",	"ent ",                         "texto ",                           "flot ",                        "dbl ",                         "char ",                            "bool ",                        "saltar ",                          "saltar ",                                          "saltar ",	"saltar ",	 "saltar ",                   "sacar ",                   "sacar "}, 
-        /*leer                    9*/{"saltar ",                                        "saltar ",                      "0 ",             "saltar ",      "saltar ",     "0 ",              "0 ",            "saltar ",          "saltar ",          "saltar ",         "saltar ",       "saltar ",         "saltar ",       "saltar ",         "saltar ",       "saltar ",     "saltar ",      "saltar ",     "saltar ",      "0 ",            "0 ",           "saltar ",                                      "saltar ",                  "saltar ",                                                     "saltar ",                                        "saltar ",                                     "saltar ",                          "lectura ( litCad ) ",      "saltar ",              "saltar ",          "saltar ",	"saltar ",                      "saltar ",                          "saltar ",                      "saltar ",                      "saltar ",                          "saltar ",                      "saltar ",                          "saltar ",                                          "saltar ",	"saltar ",	 "saltar ",                   "sacar ",                   "sacar "},
-        /*L                      10*/{"saltar ",                                        "R L' ",                        "R L' ",          "R L' ",        "saltar ",     "R L' ",           "R L' ",         "saltar ",          "saltar ",          "saltar ",         "saltar ",       "saltar ",         "saltar ",       "saltar ",         "saltar ",       "saltar ",     "saltar ",      "saltar ",     "saltar ",      "R L' ",         "R L' ",        "saltar ",                                      "saltar ",                  "saltar ",                                                     "saltar ",                                        "saltar ",                                     "saltar ",                          "saltar ",                  "saltar ",              "saltar ",          "saltar ",	"saltar ",                      "saltar ",                          "saltar ",                      "saltar ",                      "saltar ",                          "saltar ",                      "saltar ",                          "saltar ",                                          "? L ",         "saltar ",	 "saltar ",                   "0 ",                       "sacar "},
-        /*L'                     11*/{"saltar ",                                        "saltar ",                      "saltar ",        "saltar ",      "0 ",          "saltar ",         "saltar ",       "0 ",               "0 ",               "0 ",              "0 ",            "0 ",              "0 ",            "0 ",              "0 ",            "@ R L' ",     "% R L' ",      "0 ",          "0 ",           "0 ",            "0 ",           "sacar ",                                       "saltar ",                  "sacar ",                                                      "sacar ",                                         "sacar ",                                      "sacar ",                           "sacar ",                   "saltar ",              "0 ",               "0 ",           "sacar ",                       "sacar ",                           "sacar ",                       "sacar ",                       "sacar ",                           "sacar ",                       "saltar ",                          "saltar ",                                          "0 ",           "0 ",            "saltar ",                   "sacar ",                   "sacar "},
-        /*R                      12*/{"saltar ",                                        "E R' ",                        "E R' ",          "E R' ",        "saltar ",     "E R' ",           "E R' ",         "saltar ",          "saltar ",          "saltar ",         "saltar ",       "saltar ",         "saltar ",       "saltar ",         "saltar ",       "saltar ",     "saltar ",      "saltar ",     "saltar ",      "E R' ",         "E R' ",        "saltar ",                                      "saltar ",                  "saltar ",                                                     "saltar ",                                        "saltar ",                                     "saltar ",                          "saltar ",                  "saltar ",              "saltar ",          "saltar ",	"saltar ",                      "saltar ",                          "saltar ",                      "saltar ",                      "saltar ",                          "saltar ",                      "saltar ",                          "saltar ",                                          "saltar ",	"saltar ",	 "saltar ",                   "0 ",                       "sacar "},
-        /*R'                     13*/{"saltar ",                                        "saltar ",                      "saltar ",        "saltar ",      "0 ",          "saltar ",         "saltar ",       "0 ",               "0 ",               "0 ",              "0 " ,           "0 ",              "< E ",          "> E ",            "<= E ",         "0 ",          "0 ",           "!= E ",       "# E ",         "0 ",            "0 ",           "sacar ",                                       "saltar ",                  "sacar ",                                                      "sacar ",                                         "sacar ",                                      "sacar ",                           "sacar ",                   "saltar ",              "0 ",               "0 ",           "sacar ",                       "sacar ",                           "sacar ",                       "sacar ",                       "sacar ",                           "sacar ",                       "saltar ",                          "saltar ",                                          "0 ",           "0 ",	         "saltar ",                   "sacar",                    "sacar "},
-        /*E                      14*/{"saltar ",                                        "T E' ",                        "T E' ",          "T E' ",        "saltar ",     "T E' ",           "T E' ",         "saltar ",          "saltar ",          "saltar ",         "saltar ",       "saltar ",         "saltar ",       "saltar ",         "saltar ",       "saltar ",     "saltar ",      "saltar ",     "saltar ",      "T E' ",         "T E' ",        "saltar ",                                      "saltar ",                  "saltar ",                                                     "saltar ",                                        "saltar ",                                     "saltar ",                          "saltar ",                  "saltar ",              "saltar ",          "saltar ",	"saltar ",                      "saltar ",                          "saltar ",                      "saltar ",                      "saltar ",                          "saltar ",                      "saltar ",                          "saltar ",                                          "saltar ",	"saltar ",	 "saltar ",                   "0 ",                       "sacar "},
-        /*E'                     15*/{"saltar ",                                        "saltar ",                      "saltar ",        "saltar ",      "0 ",          "saltar ",         "saltar ",       "+ T E' ",          "- T E' ",          "0 ",              "0 ",            "0 ",              "0 ",            "0 ",              "0 ",            "0 ",          "0 ",           "0 ",          "0 ",           "0 ",            "0 ",           "sacar ",                                       "saltar ",                  "sacar ",                                                      "sacar ",                                         "sacar ",                                      "sacar ",                           "sacar ",                   "saltar ",              "0 ",               "0 ",           "sacar ",                       "sacar ",                           "sacar ",                       "sacar ",                       "sacar ",                           "sacar ",                       "saltar ",                          "saltar ",                                          "0 ",           "0 ",	         "saltar ",                   "sacar ",                   "sacar "},
-        /*T                      16*/{"saltar ",                                        "F T' ",                        "F T' ",          "F T' ",        "saltar ",     "F T' ",           "F T' ",         "saltar ",          "saltar ",          "saltar ",         "saltar ",       "saltar ",         "saltar ",       "saltar ",         "saltar ",       "saltar ",     "saltar ",      "saltar ",     "saltar ",      "F T' ",         "F T' ",        "saltar ",                                      "saltar ",                  "saltar ",                                                     "saltar ",                                        "saltar ",                                     "saltar ",                          "saltar ",                  "saltar ",              "saltar ",          "saltar ",	"saltar ",                      "saltar ",                          "saltar ",                      "saltar ",                      "saltar ",                          "saltar ",                      "saltar ",                          "saltar ",                                          "saltar ",	"saltar ",	 "saltar ",                   "0 ",                       "sacar "},
-        /*T'                     17*/{"saltar ",                                        "saltar ",                      "saltar ",        "saltar ",      "0 ",          "saltar ",         "saltar ",       "0 ",               "0 ",               "* F T' ",         "/ F T' ",       "0 ",              "0 ",            "0 ",              "0 ",            "0 ",          "0 ",           "0 ",          "0 ",           "0 ",            "0 ",           "sacar ",                                       "saltar ",                  "sacar ",                                                      "sacar ",                                         "sacar ",                                      "sacar ",                           "sacar ",                   "saltar ",              "0 ",               "0 ",           "sacar ",                       "sacar ",                           "sacar ",                       "sacar ",                       "sacar ",                           "sacar ",                       "saltar ",                          "saltar ",                                          "0",            "0 ",            "saltar ",                   "sacar ",                   "sacar "},
-        /*F                      18*/{"saltar ",                                        "id ",                          "num ",           "( L ) ",       "saltar ",     "litCad ",         "litCar ",       "saltar ",          "saltar ",          "saltar ",         "saltar ",       "saltar ",         "saltar ",       "saltar ",         "saltar ",       "saltar ",     "saltar ",      "saltar ",     "saltar ",      "verdadero ",    "falso ",       "saltar ",                                      "saltar ",                  "saltar ",                                                     "saltar ",                                        "saltar ",                                     "saltar ",                          "saltar ",                  "saltar ",              "saltar ",          "saltar ",	"saltar ",                      "saltar ",                          "saltar ",                      "saltar ",                      "saltar ",                          "saltar ",                      "saltar ",                          "saltar ",                                          "saltar ",	"saltar ",	 "saltar ",                   "0 ",                   "sacar "},
-        /*$                      19*/{"saltar ",                                        "saltar ",                      "saltar ",        "saltar ",      "saltar ",     "saltar ",         "saltar ",       "saltar ",          "saltar ",          "saltar ",         "saltar ",       "saltar ",         "saltar ",       "saltar ",         "saltar ",       "saltar ",     "saltar ",      "saltar ",     "saltar ",      "saltar ",       "saltar ",      "saltar ",                                      "saltar ",                  "saltar ",                                                     "saltar ",                                        "saltar ",                                     "saltar ",                          "saltar ",                  "saltar ",              "saltar ",          "saltar ",	"saltar ",                      "saltar ",                          "saltar ",                      "saltar ",                      "saltar ",                          "saltar ",                      "saltar ",                          "saltar ",                                          "saltar ",      "saltar ",	 "saltar ",                   "acepta ",                   "sacar "}};
+    String tablaSintactica[][] = {
+        //   .	    var	      ;	      ,	      =	     if	     for	  !	     {	      }	      (	      )	     &&	     ||	     <	     >	     <=	     >=	     !=	     ==	      +	      -	      *	      /	     ++	     --	 VERDADERO	FALSO	 id	    num	    char	Entero Flotante	Char	Bool	read	print	  $	 <programa>  <declaracion>	<sig_declaracion>	<bloque>	<for_expresion>	<incremento>	<tipo>	<expresion>	<sentencia>	  <R>	<L> 	<R'>	<Exp>	<E'>	<Term>	<T'>	<Factor>	<inc>
+    /*q0*/{"-1",	"I3",	"-1",	"-1",	"-1",	"P3",	"P3",	"-1",	"-1",	"-1",	"-1",	"-1",	"-1",	"-1",	"-1",	"-1",	"-1",	"-1",	"-1",	"-1",	"-1",	"-1",	"-1",	"-1",	"-1",	"-1",	"-1",	"-1",	"P3",	"-1",	"-1",	"-1",	"-1",	"-1",	"-1",	"P3",	"P3",	"-1",	"I1",	     "I2",	        "-1",	          "-1",        	 "-1",	        "-1",	    "-1",	    "-1",	    "-1",	 "-1",	"-1",	"-1",	"-1",	"-1",	"-1",	"-1",	  "-1",	    "-1"},
+    /*q1*/{"-1",	"-1",	"-1",	"-1",	"-1",	"-1",	"-1",	"-1",	"-1",	"-1",	"-1",	"-1",	"-1",	"-1",	"-1",	"-1",	"-1",	"-1",	"-1",	"-1",	"-1",	"-1",	"-1",	"-1",	"-1",	"-1",	"-1",	"-1",	"-1",	"-1",	"-1",	"-1",	"-1",	"-1",	"-1",	"-1",	"-1",	"P0",	"-1",	     "-1",      	"-1",	          "-1",	         "-1",	        "-1",	    "-1",	    "-1",	    "-1",	 "-1",	"-1",	"-1",	"-1",	"-1",	"-1",	"-1",	  "-1",	    "-1"},
+    /*q2*/{"P11",	"-1",	"-1",	"-1",	"-1",	"I6",	"I7",	"-1",	"-1",	"P11",	"-1",	"P11",	"-1",	"-1",	"-1",	"-1",	"-1",	"-1",	"-1",	"-1",	"-1",	"-1",	"-1",	"-1",	"-1",	"-1",	"-1",	"-1",	"I5",	"-1",	"-1",	"-1",	"-1",	"-1",	"-1",	"I9",	"I8",	"-1",	"-1",   	 "-1",	        "-1",	          "I4",          "-1",      	"-1",	    "-1",	    "-1",	    "-1",	 "-1",	"-1",	"-1",	"-1",	"-1",	"-1",	"-1",	  "-1",	    "-1"},
+    /*q3*/{"-1",    "-1",   "-1",   "-1",   "-1",   "-1",   "-1",   "-1",   "-1",   "-1",   "-1",   "-1",   "-1",   "-1",   "-1",   "-1",   "-1",   "-1",   "-1",   "-1",   "-1",   "-1",   "-1",   "-1",   "-1",   "-1",   "-1",   "-1",   "-1",   "-1",   "-1",  "I11",  "I12",  "I13",   "I14",  "-1",   "-1",   "-1",   "-1",        "-1",          "-1",             "-1",          "-1",          "-1",       "I10",      "-1",       "-1",    "-1",  "-1",   "-1",   "-1",   "-1",   "-1",   "-1",     "-1",     "-1"},
+    /*q4*/{"I15",   "-1",   "-1",   "-1",   "-1",   "-1",   "-1",   "-1",   "-1",   "-1",   "-1",   "-1",   "-1",   "-1",   "-1",   "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1"}
+"-1"	"-1"	"-1"	"-1"	"I16"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"
+"-1"	"-1"	"-1"	"P35"	"-1"	"-1"	"-1"	"I27"	"-1"	"-1"	"I26"	"-1"	"-1"	"-1"	"P35"	"P35"	"P35"	"P35"	"P35"	"P35"	"-1"	"I21"	"-1"	"-1"	"-1"	"-1"	"I109"	"I110"	"I23"	"I24"	"I25"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"I17"	"-1"	"I18"	"-1"	"-1"	"I19"	"-1"	"I20"	"-1"	"I22"	"-1"
+"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"I29"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"I28"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"
+"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"I30"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"
+"-1"	"-1"	"-1"	"-1"	"I31"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"
+"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"I32"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"
+"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"P16"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"
+"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"P17"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"
+"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"P18"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"
+"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"P19"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"
+"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"P1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"
+"-1"	"-1"	"-1"	"P35"	"-1"	"-1"	"-1"	"I27"	"-1"	"-1"	"I26"	"-1"	"-1"	"-1"	"P35"	"P35"	"P35"	"P35"	"P35"	"P35"	"-1"	"I21"	"-1"	"-1"	"-1"	"-1"	"I109"	"I110"	"I23"	"I24"	"I25"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"I33"	"-1"	"I18"	"-1"	"-1"	"I19"	"-1"	"I20"	"-1"	"I22"	"-1"
+"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"I35"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"I34"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"
+"-1"	"-1"	"P32"	"P32"	"-1"	"-1"	"-1"	"-1"	"P32"	"-1"	"-1"	"P32"	"I37"	"I38"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"I36"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"
+"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"P29"	"P29"	"I40"	"I41"	"I42"	"I43"	"I44"	"I45"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"I39"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"
+"-1"	"-1"	"-1"	"P38"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"P38"	"P38"	"P38"	"P38"	"P38"	"P38"	"I47"	"I48"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"I46"	"-1"	"-1"	"-1"	"-1"
+"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"I26"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"I23"	"I24"	"I25"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"I49"	"-1"	"I22"	"-1"
+"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"P42"	"P42"	"I51"	"I52"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"I50"	"-1"	"-1"
+"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"P43"	"P43"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"
+"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"P44"	"P44"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"
+"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"P45"	"P45"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"
+"-1"	"-1"	"-1"	"P35"	"-1"	"-1"	"-1"	"I27"	"-1"	"-1"	"I26"	"-1"	"-1"	"-1"	"P35"	"P35"	"P35"	"P35"	"P35"	"P35"	"-1"	"I21"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"I23"	"I24"	"I25"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"I53"	"-1"	"I18"	"-1"	"-1"	"I19"	"-1"	"I20"	"-1"	"I22"	"-1"
+"-1"	"-1"	"-1"	"P35"	"-1"	"-1"	"-1"	"I27"	"-1"	"-1"	"I26"	"-1"	"-1"	"-1"	"P35"	"P35"	"P35"	"P35"	"P35"	"P35"	"-1"	"I21"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"I23"	"I24"	"I25"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"I54"	"-1"	"I18"	"-1"	"-1"	"I19"	"-1"	"I20"	"-1"	"I22"	"-1"
+"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"I35"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"I55"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"
+"-1"	"I56"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"
+"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"I57"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"
+"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"I58"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"
+"-1"	"-1"	"P5"	"I60"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"I59"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"
+"-1"	"-1"	"I61"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"
+"P11"	"-1"	"-1"	"-1"	"-1"	"I6"	"I7"	"-1"	"-1"	"P11"	"-1"	"P11"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"I5"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"I9"	"I8"	"-1"	"-1"	"-1"	"-1"	"I62"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"
+"P11"	"-1"	"-1"	"-1"	"-1"	"I6"	"I7"	"-1"	"-1"	"P11"	"-1"	"P11"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"I5"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"I9"	"I8"	"-1"	"-1"	"-1"	"-1"	"I63"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"
+"-1"	"-1"	"P20"	"P20"	"-1"	"-1"	"-1"	"-1"	"P20"	"-1"	"-1"	"P20"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"
+"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"I26"	"-1"	"-1"	"-1"	"P35"	"P35"	"P35"	"P35"	"P35"	"P35"	"-1"	"I21"	"-1"	"-1"	"-1"	"-1"	"I109"	"I110"	"I23"	"I24"	"I25"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"I64"	"-1"	"-1"	"I19"	"-1"	"I20"	"-1"	"I22"	"-1"
+"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"I26"	"-1"	"-1"	"-1"	"P35"	"P35"	"P35"	"P35"	"P35"	"P35"	"-1"	"I21"	"-1"	"-1"	"-1"	"-1"	"I109"	"I110"	"I23"	"I24"	"I25"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"I65"	"-1"	"-1"	"I19"	"-1"	"I20"	"-1"	"I22"	"-1"
+"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"P22"	"P22"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"
+"-1"	"-1"	"-1"	"P35"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"I26"	"-1"	"-1"	"-1"	"P35"	"P35"	"P35"	"P35"	"P35"	"P35"	"-1"	"I21"	"-1"	"-1"	"-1"	"-1"	"I109"	"I110"	"I23"	"I24"	"I25"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"I66"	"-1"	"I20"	"-1"	"I22"	"-1"
+"-1"	"-1"	"-1"	"P35"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"I26"	"-1"	"-1"	"-1"	"P35"	"P35"	"P35"	"P35"	"P35"	"P35"	"-1"	"I21"	"-1"	"-1"	"-1"	"-1"	"I109"	"I110"	"I23"	"I24"	"I25"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"I67"	"-1"	"I20"	"-1"	"I22"	"-1"
+"-1"	"-1"	"-1"	"P35"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"I26"	"-1"	"-1"	"-1"	"P35"	"P35"	"P35"	"P35"	"P35"	"P35"	"-1"	"I21"	"-1"	"-1"	"-1"	"-1"	"I109"	"I110"	"I23"	"I24"	"I25"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"I68"	"-1"	"I20"	"-1"	"I22"	"-1"
+"-1"	"-1"	"-1"	"P35"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"I26"	"-1"	"-1"	"-1"	"P35"	"P35"	"P35"	"P35"	"P35"	"P35"	"-1"	"I21"	"-1"	"-1"	"-1"	"-1"	"I109"	"I110"	"I23"	"I24"	"I25"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"I69"	"-1"	"I20"	"-1"	"I22"	"-1"
+"-1"	"-1"	"-1"	"P35"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"I26"	"-1"	"-1"	"-1"	"P35"	"P35"	"P35"	"P35"	"P35"	"P35"	"-1"	"I21"	"-1"	"-1"	"-1"	"-1"	"I109"	"I110"	"I23"	"I24"	"I25"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"I70"	"-1"	"I20"	"-1"	"I22"	"-1"
+"-1"	"-1"	"-1"	"P35"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"I26"	"-1"	"-1"	"-1"	"P35"	"P35"	"P35"	"P35"	"P35"	"P35"	"-1"	"I21"	"-1"	"-1"	"-1"	"-1"	"I109"	"I110"	"I23"	"I24"	"I25"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"I71"	"-1"	"I20"	"-1"	"I22"	"-1"
+"-1"	"-1"	"-1"	"P33"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"P33"	"P33"	"P33"	"P33"	"P33"	"P33"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"
+"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"I26"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"I109"	"I110"	"I23"	"I24"	"I25"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"I72"	"-1"	"I22"	"-1"
+"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"I26"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"I109"	"I110"	"I23"	"I24"	"I25"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"I73"	"-1"	"I22"	"-1"
+"-1"	"-1"	"-1"	"P38"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"P38"	"P38"	"P38"	"P38"	"P38"	"P38"	"I47"	"I48"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"I74"	"-1"	"-1"	"-1"	"-1"
+"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"P39"	"P39"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"
+"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"I109"	"I110"	"I23"	"I24"	"I25"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"I75"	"-1"
+"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"I109"	"I110"	"I23"	"I24"	"I25"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"I76"	"-1"
+"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"I77"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"
+"-1"	"-1"	"P21"	"P21"	"-1"	"-1"	"-1"	"-1"	"P21"	"-1"	"-1"	"P21"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"
+"P11"	"-1"	"-1"	"-1"	"-1"	"I6"	"I7"	"-1"	"-1"	"P11"	"-1"	"P11"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"I5"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"I9"	"I8"	"-1"	"-1"	"-1"	"-1"	"I78"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"
+"-1"	"-1"	"-1"	"-1"	"I79"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"
+"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"I80"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"
+"-1"	"-1"	"I81"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"
+"-1"	"-1"	"I111"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"
+"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"I82"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"
+"P11"	"-1"	"-1"	"-1"	"-1"	"I6"	"I7"	"-1"	"-1"	"P11"	"-1"	"P11"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"I5"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"I9"	"I8"	"-1"	"-1"	"-1"	"-1"	"I83"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"
+"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"P7"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"
+"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"I84"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"
+"-1"	"-1"	"P32"	"P32"	"-1"	"-1"	"-1"	"-1"	"P32"	"-1"	"-1"	"P32"	"I37"	"I38"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"I85"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"
+"-1"	"-1"	"P32"	"P32"	"-1"	"-1"	"-1"	"-1"	"P32"	"-1"	"-1"	"P32"	"I37"	"I38"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"I86"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"
+"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"P29"	"P29"	"I40"	"I41"	"I42"	"I43"	"I44"	"I45"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"I87"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"
+"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"P29"	"P29"	"I40"	"I41"	"I42"	"I43"	"I44"	"I45"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"I88"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"
+"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"P29"	"P29"	"I40"	"I41"	"I42"	"I43"	"I44"	"I45"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"I89"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"
+"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"P29"	"P29"	"I40"	"I41"	"I42"	"I43"	"I44"	"I45"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"I90"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"
+"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"P29"	"P29"	"I40"	"I41"	"I42"	"I43"	"I44"	"I45"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"I91"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"
+"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"P29"	"P29"	"I40"	"I41"	"I42"	"I43"	"I44"	"I45"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"I92"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"
+"-1"	"-1"	"-1"	"P38"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"P38"	"P38"	"P38"	"P38"	"P38"	"P38"	"I47"	"I48"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"I93"	"-1"	"-1"	"-1"	"-1"
+"-1"	"-1"	"-1"	"P38"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"P38"	"P38"	"P38"	"P38"	"P38"	"P38"	"I47"	"I48"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"I94"	"-1"	"-1"	"-1"	"-1"
+"-1"	"-1"	"-1"	"P38"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"P38"	"P38"	"P38"	"P38"	"P38"	"P38"	"I47"	"I48"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"I95"	"-1"	"-1"	"-1"	"-1"
+"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"P42"	"P42"	"I51"	"I52"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"I96"	"-1"	"-1"
+"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"P42"	"P42"	"I51"	"I52"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"I97"	"-1"	"-1"
+"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"P46"	"-1"
+"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"P8"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"
+"-1"	"-1"	"-1"	"P35"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"I26"	"-1"	"-1"	"-1"	"P35"	"P35"	"P35"	"P35"	"P35"	"P35"	"-1"	"I21"	"-1"	"-1"	"-1"	"-1"	"I109"	"I110"	"I23"	"I24"	"I25"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"I98"	"-1"	"I20"	"-1"	"I22"	"-1"
+"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"P9"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"
+"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"P10"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"
+"-1"	"-1"	"P5"	"I60"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"I99"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"
+"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"P6"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"
+"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"P15"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"
+"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"P30"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"
+"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"P31"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"
+"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"P23"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"
+"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"P24"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"
+"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"P25"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"
+"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"P26"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"
+"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"P27"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"
+"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"P28"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"
+"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"P36"	"-1"	"-1"	"-1"	"-1"
+"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"P37"	"-1"	"-1"	"-1"	"-1"
+"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"P34"	"-1"	"-1"	"-1"	"-1"	"-1"
+"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"P40"	"-1"	"-1"
+"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"P41"	"-1"	"-1"
+"-1"	"-1"	"-1"	"I100"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"
+"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"P4"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"
+"-1"	"-1"	"-1"	"P35"	"-1"	"-1"	"-1"	"I27"	"-1"	"-1"	"I26"	"-1"	"-1"	"-1"	"P35"	"P35"	"P35"	"P35"	"P35"	"P35"	"-1"	"I21"	"-1"	"-1"	"-1"	"-1"	"I109"	"I110"	"I23"	"I24"	"I25"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"I101"	"-1"	"I18"	"-1"	"-1"	"I19"	"-1"	"I20"	"-1"	"I22"	"-1"
+"-1"	"-1"	"-1"	"I102"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"I103"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"
+"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"I104"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"
+"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"I105"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"
+"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"I108"	"I107"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"I106"
+"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"P12"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"
+"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"P13"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"
+"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"P14"
+"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"P49"
+"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"P47"	"-1"
+"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"P48"	"-1"
+"-1"	"I3"	"-1"	"-1"	"-1"	"P3"	"P3"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"P3"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"P3"	"P3"	"-1"	"-1"	"I112"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"
+"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"P2"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"	"-1"};
     
     
     
@@ -83,7 +175,6 @@ public class Com extends javax.swing.JFrame {
 
     public Com() {
         initComponents();
-          colors();
         Inicializa();
         cosasVisuales();
         Inicial();
@@ -134,8 +225,15 @@ public class Com extends javax.swing.JFrame {
     }
 
     public void Inicializa() {
-        tokens = new ArrayList<>();
-
+        modeloTabla = new DefaultTableModel();
+        modeloTabla.addColumn("Pila");
+        modeloTabla.addColumn("Token");
+        modeloTabla.addColumn("Accion");
+        modeloTabla.addColumn("Indice");
+        jTable1.setModel(modeloTabla);
+        pilaSintactica.clear();
+        pilaSintactica.add("$");
+        pilaSintactica.add("I0");
     }
 
     private void analisisLexico() {
@@ -153,12 +251,18 @@ public class Com extends javax.swing.JFrame {
             lexer = new Lexer(fileInputReader);// Inicializamos el lexer con el contenido del archivo
 
             while (true) { // Iteramos a través de cada token producido por el lexer hasta que no haya más
-                Token token = lexer.yylex();
+                token = lexer.yylex();
                 if (token == null) {
                     break;
                 }
-                // Añadimos cada token a la lista de tokens
-                tokens.add(token);
+                // nota en caso de encontrar un error manda a llamar el metodo
+                if (token.getLexicalComp().equals("ERROR"))
+                {
+                    this.Error("Lexico", token.getLine(), token.getLexeme());
+                    break;
+                }
+                // cada vez que saca un componente lexico lo manda al analisis sintactico
+                this.AnalizadorSintactico(token.getLexicalComp());
             }
         } catch (FileNotFoundException ex) {
             // En caso de que el archivo no pueda ser encontrado, se muestra un mensaje de error
@@ -168,505 +272,431 @@ public class Com extends javax.swing.JFrame {
             System.out.println("Error al escribir en el archivo... " + ex.getMessage());
         }
     }
-
-    private void analisisLexicoEerr() {
-
-        // Recorrer todos los tokens
-        for (int i = 0; i < tokens.size(); i++) {
-
-            // Si el token es de tipo ERROR
-            if ("ERROR".equals(tokens.get(i).getLexicalComp())) {
-
-                // En función del tipo de error, añadir el mensaje correspondiente
-                String errorMsg = "Error Lexico linea " + tokens.get(i).getLine() + ": token [ " + tokens.get(i).getLexeme() + " ] ";
-                if (tokens.get(i).getLexeme().matches("[\"]")) {
-                    errorMsg += "se esperaba comilla doble de cierre ";
-                    errorFlag = 1;
-                } else if (tokens.get(i).getLexeme().matches("[\']")) {
-                    errorMsg += "se esperaba comilla simple de cierre ";
-                    errorFlag = 1;
-                } else if (tokens.get(i).getLexeme().matches("'[^']*'")) {
-                    errorMsg += "se esperaba solo un caracter entre las comillas simples ";
-                    errorFlag = 1;
-                } else {
-                    errorMsg += "no es valido ";
-                    errorFlag = 1;
-                }
-
-                // Añadir la línea y columna del error
-                errorMsg += "[" + tokens.get(i).getLine() + ", " + tokens.get(i).getColumn() + "]\n";
-
-                // Actualizar el contenido del campo mensajes
-                mensajes.setText(mensajes.getText() + errorMsg);
+    
+    public void AnalizadorSintactico(String token)
+    {
+        do
+        {
+            switch(pilaSintactica.peek().charAt(0))
+            {
+                case 'I':
+                    this.DesplasarEstado(token);
+                    break;
+                case 'P':
+                    this.Produccion(token);
+                    break;
+                default:
+                    this.Error("Sintactico", this.token.getLine(), token);
             }
-            //AnalisisSintactico(tokens.get(i).getLexicalComp());
-        }
+        }while(banProduccion);
     }
-
-    public void AnalisisSintacticoInicioPila() {
-
-        // Si la bandera 'ban' es verdadera.
-        if (banP) {
-
-            pila.push("$"); // Coloca en la pila el símbolo de fin de archivo o de fin de entrada "$".          
-            pila.push("prog "); // Añade a la pila el símbolo no terminal "prog".
-
-            // banP = false;  // Asigna a la bandera 'banP' el valor de false.
-            // Imprime en consola el contenido de la pila.
-            // Crear una nueva tabla para mostrar la pila y las acciones
-            modeloTabla = new DefaultTableModel();
-            modeloTabla.addColumn("Pila");
-            modeloTabla.addColumn("Token");
-            modeloTabla.addColumn("Accion");
-            modeloTabla.addColumn("Indice");
-            jTable1.setModel(modeloTabla);
-
-            System.out.println(pila + "");
-            modeloTabla.addRow(new Object[]{pila.toString(), " ", " "});
-
-        }
-
-    }
-
-    boolean banpr = true;
-
-    public void AnalisisSintactico(String token, int linea,String caracter) {
-
-        String accion;
-        String indice = Renglon() + "-" + Columna(token);
-        accion = matriz[Renglon()][Columna(token)];
-
-        try {
-
-            switch (pila.peek()) {
-
-                case "{":
-                    if (accion.equals("ent id lista_argumentos ")) {
-                        mensajes.setText(mensajes.getText() + "Error sintactico linea " + linea + ": Se esperaba un { \n" + "atras del token: " + token + "\n");
-
-                        break;
-                    }
-            }
-
-            if (token.equals(pila.peek())) {
-                accion = "Concuerda";
-                if (token.equals("$")) {
-                    //Aqui le queria poner unas cosillas  
-                    
-                    
-                    pila.pop();
-                    modeloTabla.addRow(new Object[]{pila.toString(), pila.peek(), accion, indice});
-                    
-                    return;
-                } else // Si el token de entrada no es el símbolo de fin de entrada, procesa el símbolo en la cima de la pil
-                {
-                    
-                    modeloTabla.addRow(new Object[]{pila.toString(), pila.peek(), accion, indice});
-                    
-                }
-                pila.pop();
-                 modeloTabla.addRow(new Object[]{pila.toString(), pila.peek(), accion, indice});
-
-            }else if(terminal(pila.peek(),token)){
-                
-                mensajes.setText(mensajes.getText() + "Error sintactico linea " + linea + ": Se esperaba " +pila.peek()+" \n");
-                pila.pop();
-                modeloTabla.addRow(new Object[]{pila.toString(), pila.peek(), accion, indice});
-                this.AnalisisSintactico(token, linea,caracter);//Sigue con el mismo toke  
-            }else if (accion == "saltar ") {
-                
-                
-                 if (caracter.contains("\"")) {
-
-                            mensajes.setText(mensajes.getText() + "Error sintactico linea " + linea + ": Se esperaba cierre de comillas\n");
-
-                          
-                                 
-                        }
-                 
-                 
-                 if (caracter.contains("\'")) {
-
-                            mensajes.setText(mensajes.getText() + "Error sintactico linea " + linea + ": Se esperaba cierre de comilla simple\n");
-
-                           
-                        }
-
-                switch (pila.peek()) {
-                    case "prog ":
-
-                        if (banpr) {
-
-                            mensajes.setText(mensajes.getText() + "Error sintactico linea " + linea + ": Se esperaba la palabra 'Inicio' \n");
-
-                            banpr = false;
-                        }
-                        break;
-
-                    case "id":
-
-                        mensajes.setText(mensajes.getText() + "Error sintactico linea " + linea + ": Se esperaba un id \n");
-                        break;
-
-                    case "{":
-
-                        mensajes.setText(mensajes.getText() + "Error sintactico linea " + linea + ": Se esperaba una llabe de apertura '{' \n");
-                        break;
-
-                    case "}":
-
-                        mensajes.setText(mensajes.getText() + "Error sintactico linea " + linea + ": Se esperaba una llabe de cierre '}' \n");
-                        break;
-
-                    case "(":
-
-                        mensajes.setText(mensajes.getText() + "Error sintactico linea " + linea + ": Se esperaba una parentecis de apertura '(' \n");
-                        break;
-
-                    case ")":
-
-                        mensajes.setText(mensajes.getText() + "Error sintactico linea " + linea + ": Se esperaba una parentecis de cierre ')' \n");
-                        break;
-
-                    case "L":
-
-                        mensajes.setText(mensajes.getText() + "Error sintactico linea " + linea + ": Se esperaban argumentos \n");
-                        break;
-
-                    case "T'":
-                        if (token.equals(",")) {
-                            mensajes.setText(mensajes.getText() + "Error sintactico linea " + linea + ": no puede seguir un ' , ' \n");
-                        } else {
-                            mensajes.setText(mensajes.getText() + "Error sintactico linea " + linea + ": Se esperaban algun operador o comparacion \n");
-                        }
-                        break;
-
-                    case ";":
-
-                        mensajes.setText(mensajes.getText() + "Error sintactico linea " + linea + ": Se esperaba ;  \n");
-
-                        break;
-
-                    case "sigid":
-
-                        mensajes.setText(mensajes.getText() + "Error sintactico linea " + linea + ": Se esperaba ;  \n");
-
-                        break;
-                        
-                        case "=":
-                        if(!token.equals(pila.peek())){
-                            mensajes.setText(mensajes.getText() + "Error sintactico linea " + linea + ": Se esperaba =  \n");
-                        }
-                        break;
-                        
-                        case "sentencias":
-                        mensajes.setText(mensajes.getText() + "Error sintactico linea " + linea + ": Se esperaba una sentencia  \n");
-
-                        break;
-                }
-
-                System.out.println(pila.toString());
-                modeloTabla.addRow(new Object[]{pila.toString(), token, accion, indice});
-
-                return;
-
-            } else if (accion == "sacar ") {
-
-                switch (pila.peek()) {
-                    case "prog ":
-
-                        if (banpr) {
-
-                            mensajes.setText(mensajes.getText() + "Error sintactico linea " + linea + ": Se esperaba la palabra 'Inicio' \n");
-
-                            banpr = false;
-                        }
-                        break;
-
-                    case "id":
-
-                        mensajes.setText(mensajes.getText() + "Error sintactico linea " + linea + ": Se esperaba un id \n");
-                        break;
-
-                    case "{":
-
-                        mensajes.setText(mensajes.getText() + "Error sintactico linea " + linea + ": Se esperaba una llabe de apertura '{' \n");
-                        break;
-
-                    case "}":
-
-                        mensajes.setText(mensajes.getText() + "Error sintactico linea " + linea + ": Se esperaba una llabe de cierre '}' \n");
-                        break;
-
-                    case "(":
-
-                        mensajes.setText(mensajes.getText() + "Error sintactico linea " + linea + ": Se esperaba una parentecis de apertura '(' \n");
-                        break;
-
-                    case ")":
-
-                        mensajes.setText(mensajes.getText() + "Error sintactico linea " + linea + ": Se esperaba una parentecis de cierre ')' \n");
-                        break;
-
-                    case "L":
-
-                        mensajes.setText(mensajes.getText() + "Error sintactico linea " + linea + ": Se esperaban argumentos \n");
-                        break;
-
-                    case "T'":
-
-                        mensajes.setText(mensajes.getText() + "Error sintactico linea " + linea + ": Se esperaban ; \n");
-
-                        break;
-
-                    case "sigid":
-
-                        mensajes.setText(mensajes.getText() + "Error sintactico linea " + linea + ": Se esperaba ;  \n");
-
-                        break;
-                    case "dec":
-                        // verifica si el token no es un tipo de dato
-                        if (!tipo(token)) {
-                            mensajes.setText(mensajes.getText() + "Error sintactico linea " + linea + ": Se esperaba tipo  \n");
-                        }
-                        break;
-
-                }
-
-                modeloTabla.addRow(new Object[]{pila.toString(), token, accion, indice});
-                System.out.println(pila.toString());
-
-                System.out.println("ERROR: Antes del pop habia:  " + token);
-                pila.pop();
-                System.out.println("ERROR: Despues del pop habia:  " + token);
-                this.AnalisisSintactico(token, linea,caracter);//Sigue con el mismo token   
-
-            } else if (accion == "0 ") {
-
-                modeloTabla.addRow(new Object[]{pila.toString(), token, accion, indice});
-                System.out.println(pila.toString());
-                pila.pop();
-                this.AnalisisSintactico(token, linea,caracter);//Sigue con el mismo toke  
-
-            } else {
-                ///PILA AUXILIAR
-
-                String palabras = ""; //Almacena las palabras de la cadena
-                //modeloTabla.addRow(new Object[]{pila.toString(), token, accion, indice});
-                //System.out.println(pila.toString());
-                
-                pila.pop();
-                for (int j = 0; j < accion.length(); j++) //Si el caracter no es un espacio en blanco entonces se concatena pal
-                {
-
-                    if (accion.charAt(j) != ' ') {
-                        palabras += accion.charAt(j) + "";
-                    } //Si es un espacio en blanco indica que se completo una palabra y entonces se agrega la pila auxiliar
-                    else {
-                        pilaaux.push(palabras); //Agrega la palabra a la pila auxiliar
-                        palabras = "";
-                    }
-                }
-                do {
-                    pila.push(pilaaux.pop()); //Agrega los elementos de la pila auxiliar a la pila original
-                } while (!pilaaux.isEmpty());
-
-                modeloTabla.addRow(new Object[]{pila.toString(), token, accion, indice});
-                System.out.println(pila.toString());
-
-                this.AnalisisSintactico(token, linea,caracter);//Sigue con el mismo token
-
-            }
-
-        } catch (Exception e) {
-            System.out.println("cdscsdx");
-        }
-
-    }
-
-    private boolean tipo(String token) {
-        List<String> tipos = Arrays.asList("ent", "texto", "flot", "dbl", "char", "bool");
-        boolean resultado = tipos.contains(token);
-        return resultado;
-    }
-
-    private void llenarPila() {
-        tokens.forEach(token -> {
-
-            variable = token.getLine();
-
-            //Imprimir el token en mi JTextpanel de mi analizador lexico 
-            if (token.getLexicalComp() == "pReservada" || token.getLexicalComp() == "tipoDa") {
-
-                AnalisisSintactico(token.getLexeme(), token.getLine(),token.getLexeme());
-            }  else if (token.getLexicalComp() == "ERROR") {
-                 AnalisisSintactico(token.getLexicalComp(), token.getLine(),token.getLexeme());
-            }else {
-
-                AnalisisSintactico(token.getLexicalComp(), token.getLine(),token.getLexeme());
-
-            }
-        });
+    
+    @SuppressWarnings("empty-statement")
+    public void DesplasarEstado(String token)
+    {
+        estadoPila = pilaSintactica.peek().substring(1);
+        estadoSintactico = Integer.parseInt(estadoPila);
+        for(posicionEntrada = 0; posicionEntrada < encabezadosColumnas.length && !encabezadosColumnas[posicionEntrada].equals(token); posicionEntrada++);
         
-         mensajes.setText(mensajes.getText() + "Analisis terminado...");
-    }
-    private boolean terminal(String Ptoken,String token){
-        for (String encabezadosColumna : encabezadosColumnas) {
-            if(encabezadosColumna.equals(Ptoken)){
-                return !Ptoken.equals(token);
-            }
+        switch(tablaSintactica[estadoSintactico][posicionEntrada].charAt(0))
+        {
+            case 'I':
+                pilaSintactica.push(token);
+                pilaSintactica.push(tablaSintactica[estadoSintactico][posicionEntrada]);
+                break;
+            case 'P': 
+                this.Produccion(token);
+                break;
+            default:
+                this.Error("Sintactico", this.token.getLine(), token);
         }
-        return false;
     }
-    private void llenarJPnaleTokens() {
-        tokens.forEach(token -> {
-
-            variable = token.getLine();
-
-            //solucion rapida para imprimir el salto de linea casda que se encuentre cambio en la linea 
-            if (variable != valorAnterior) {
-                lexico.setText(lexico.getText() + "\n");// Imprimir salto de línea
-                valorAnterior = token.getLine();
-            }
-            if (token.getLexicalComp() == "pReservada" || token.getLexicalComp() == "tipoDa") {
-
-                lexico.setText(lexico.getText() + " " + token.getLexeme());
-                //Imprimir el token en mi JTextpanel de mi analizador lexico 
-            } else if (token.getLexicalComp() == "ERROR") {
-                lexico.setText(lexico.getText() + " ");
-            } else {
-
-                lexico.setText(lexico.getText() + " " + token.getLexicalComp());
-            }
-
-        });
-    }
-
-    //Metodo que busca un elemento dentro del encabezadosRenglones y devuelve el indice o posicion donde lo encontro
-    public int Renglon() {
-        for (int i = 0; i < encabezadosRenglones.length; i++) {
-            if (encabezadosRenglones[i].equals(pila.peek())) {
-                renglones = i;
-                break;
-            }
+    @SuppressWarnings("empty-statement")
+    public void Produccion(String token)
+    {
+        if(!token.equals("P0"))
+        {
+            int numeroProduccion, numeroEliminacion;
+            numeroProduccion = Integer.parseInt(token.substring(1));
+            numeroEliminacion = eliminacionProduccion[numeroProduccion];
+            
+            for(int x = 0; x < numeroEliminacion; x++)
+                pilaSintactica.pop();
+            
+            estadoSintactico = Integer.parseInt(pilaSintactica.peek().substring(1));
+            for(posicionEntrada = 0; posicionEntrada < encabezadosColumnas.length && !encabezadosColumnas[posicionEntrada].equals(produccionTerminal[numeroProduccion]); posicionEntrada++);
+            
+            pilaSintactica.push(produccionTerminal[numeroProduccion]);
+            pilaSintactica.push(tablaSintactica[estadoSintactico][posicionEntrada]);
+            
+            banProduccion = true;
         }
-        return renglones;
+        else
+        {
+            banProduccion = false;
+        }
     }
-
-    //ESTE METODO ES DE MARTIN SABRA DIOS DE DONDE SE SACO ESA SOLUCION PROVICIONAL XD
-    public void FaltaPila(int linea) {
-        switch (pila.peek()) {
-            case "id":
-                mensajes.setText("");
-                mensajes.setText(mensajes.getText() + "Error sintactico linea " + linea + ": Se esperaba como siguiente token un id \n");
+    public void Error(String tipoError, int numeroLinea, String token)
+    {
+        switch(tipoError)
+        {
+            case "Lexico":
+                errorMsg = "Error Lexico linea " + numeroLinea + ": token [ " + token + " ] ";
+                this.ErrorLexico();
                 break;
-
-            case "{":
-                mensajes.setText("");
-                mensajes.setText(mensajes.getText() + "Error sintactico linea " + linea + ": Se esperaba como siguiente token un { \n");
+            case "Sintactico":
+                this.ErrorSintactico(token);
                 break;
-
-            case "modulos":
-                mensajes.setText("");
-                mensajes.setText(mensajes.getText() + "Error sintactico linea " + linea + ": Se esperaba como siguiente un modulos o dec o sentencias o } \n");
-                break;
-
-            case "}":
-                mensajes.setText("");
-                mensajes.setText(mensajes.getText() + "Error sintactico linea " + linea + ": Se esperaba como siguiente token un } \n");
-                break;
-
-            case "dec":
-                mensajes.setText("");
-                mensajes.setText(mensajes.getText() + "Error sintactico linea " + linea + ": Se esperaba como siguiente un dec o sentencias o } \n");
-                break;
-
-            case "sentencias":
-                mensajes.setText("");
-                mensajes.setText(mensajes.getText() + "Error sintactico linea " + linea + ": Se esperaba como siguiente sentencias o } \n");
-                break;
-
-            case "(":
-                mensajes.setText("");
-                mensajes.setText(mensajes.getText() + "Error sintactico linea " + linea + ": Se esperaba como siguiente token un ( \n");
-                break;
-
-            case ")":
-                mensajes.setText("");
-                mensajes.setText(mensajes.getText() + "Error sintactico linea " + linea + ": Se esperaba como siguiente token un ) \n");
-                break;
-
-            case "argumentos":
-                mensajes.setText("");
-                mensajes.setText(mensajes.getText() + "Error sintactico linea " + linea + ": Se esperaba como siguiente token un argumentos o ) \n");
-                break;
-
-            case "sigid":
-                mensajes.setText("");
-                mensajes.setText(mensajes.getText() + "Error sintactico linea " + linea + ": Se esperaba como siguiente token un = o , o ; \n");
-                break;
-
-            case "L":
-                mensajes.setText("");
-                mensajes.setText(mensajes.getText() + "Error sintactico linea " + linea + ": Se esperaba como siguiente token un operador \n");
-                break;
-
-            case "L'":
-            case "R'":
-            case "E'":
-            case "T'":
-                mensajes.setText("");
-                mensajes.setText(mensajes.getText() + "Error sintactico linea " + linea + ": Se esperaba como siguiente token un ; si es declaracion o un == para los metodos si y sino o en casos de cierre un ) para las sentencias \n");
-                break;
-
-            case "E":
-                mensajes.setText("");
-                mensajes.setText(mensajes.getText() + "Error sintactico linea " + linea + ": Se esperaba como siguiente token un operador o num\n");
-                break;
-
-            case ";":
-                mensajes.setText("");
-                mensajes.setText(mensajes.getText() + "Error sintactico linea " + linea + ": Se esperaba como siguiente token un ;\n");
-                break;
-
-            case "else":
-                mensajes.setText("");
-                mensajes.setText(mensajes.getText() + "Error sintactico linea " + linea + ": Se esperaba como siguiente token  sino\n");
-                break;
-
-            case "=":
-                mensajes.setText("");
-                mensajes.setText(mensajes.getText() + "Error sintactico linea " + linea + ": Se esperaba como siguiente token  = \n");
-                break;
-
-            case "leer":
-                mensajes.setText("");
-                mensajes.setText(mensajes.getText() + "Error sintactico linea " + linea + ": Se esperaba como siguiente token  num \n");
-                break;
-
-            case "$":
-                mensajes.setText("");
-                mensajes.setText(mensajes.getText() + "Analisis Sintactico Correcto\n");
-                break;
-
-            case "":
-                mensajes.setText("");
-                mensajes.setText(mensajes.getText() + "Analisis Sintactico Incorrecto\n");
+            case "Semantico":
                 break;
         }
     }
-
-    //Metodo que busca la posicion del token dentro de encabezadosColumnas y devuelve su posicion
-    public int Columna(String token) {
-        for (int i = 0; i < encabezadosColumnas.length; i++) {
-            if (token.equals(encabezadosColumnas[i])) {
-                columnas = i;
-                break;
-            }
+    private void ErrorLexico()
+    {
+        // En función del tipo de error, añadir el mensaje correspondiente
+        if (token.getLexeme().matches("[\"]")) {
+            errorMsg += "se esperaba comilla doble de cierre ";
+            errorFlag = 1;
+        } else if (token.getLexeme().matches("[\']")) {
+            errorMsg += "se esperaba comilla simple de cierre ";
+            errorFlag = 1;
+        } else if (token.getLexeme().matches("'[^']*'")) {
+            errorMsg += "se esperaba solo un caracter entre las comillas simples ";
+            errorFlag = 1;
+        } else {
+            errorMsg += "no es valido ";
+            errorFlag = 1;
         }
-        return columnas;
-    }
 
+        // Añadir la línea y columna del error
+        errorMsg += "[" + token.getLine() + ", " + token.getColumn() + "]\n";
+
+        // Actualizar el contenido del campo mensajes
+        mensajes.setText(mensajes.getText() + errorMsg);
+    }
+    private void ErrorSintactico(String token)
+    {
+        for(int x = 0; x < 38; x++)
+            if(!tablaSintactica[Integer.parseInt(estadoPila)][x].equals("-1"))
+                tokenEsperados.addElement(encabezadosColumnas[x]);
+                
+    }
+//*********************************************************************** */
+//           
+//            modeloTabla.addRow(new Object[]{pila.toString(), " ", " "});
+
+//    public void AnalisisSintactico(String token, int linea,String caracter) {
+
+//        String indice = Renglon() + "-" + Columna(token);
+//        accion = matriz[Renglon()][Columna(token)];
+//
+//        try {
+//
+//            switch (pila.peek()) {
+//
+//                case "{":
+//                    if (accion.equals("ent id lista_argumentos ")) {
+//                        mensajes.setText(mensajes.getText() + "Error sintactico linea " + linea + ": Se esperaba un { \n" + "atras del token: " + token + "\n");
+//
+//                        break;
+//                    }
+//            }
+//
+//            if (token.equals(pila.peek())) {
+//                accion = "Concuerda";
+//                if (token.equals("$")) {
+//                    //Aqui le queria poner unas cosillas  
+//                    
+//                    
+//                    pila.pop();
+//                    modeloTabla.addRow(new Object[]{pila.toString(), pila.peek(), accion, indice});
+//                    
+//                    return;
+//                } else // Si el token de entrada no es el símbolo de fin de entrada, procesa el símbolo en la cima de la pil
+//                {
+//                    
+//                    modeloTabla.addRow(new Object[]{pila.toString(), pila.peek(), accion, indice});
+//                    
+//                }
+//                pila.pop();
+//                 modeloTabla.addRow(new Object[]{pila.toString(), pila.peek(), accion, indice});
+//
+//            }else if(terminal(pila.peek(),token)){
+//                
+//                mensajes.setText(mensajes.getText() + "Error sintactico linea " + linea + ": Se esperaba " +pila.peek()+" \n");
+//                pila.pop();
+//                modeloTabla.addRow(new Object[]{pila.toString(), pila.peek(), accion, indice});
+//                this.AnalisisSintactico(token, linea,caracter);//Sigue con el mismo toke  
+//            }else if (accion == "saltar ") {
+//                
+//                
+//                 if (caracter.contains("\"")) {
+//
+//                            mensajes.setText(mensajes.getText() + "Error sintactico linea " + linea + ": Se esperaba cierre de comillas\n");
+//
+//                          
+//                                 
+//                        }
+//                 
+//                 
+//                 if (caracter.contains("\'")) {
+//
+//                            mensajes.setText(mensajes.getText() + "Error sintactico linea " + linea + ": Se esperaba cierre de comilla simple\n");
+//
+//                           
+//                        }
+//
+//                switch (pila.peek()) {
+//                    case "prog ":
+//
+//                        if (banpr) {
+//
+//                            mensajes.setText(mensajes.getText() + "Error sintactico linea " + linea + ": Se esperaba la palabra 'Inicio' \n");
+//
+//                            banpr = false;
+//                        }
+//                        break;
+//
+//                    case "id":
+//
+//                        mensajes.setText(mensajes.getText() + "Error sintactico linea " + linea + ": Se esperaba un id \n");
+//                        break;
+//
+//                    case "{":
+//
+//                        mensajes.setText(mensajes.getText() + "Error sintactico linea " + linea + ": Se esperaba una llabe de apertura '{' \n");
+//                        break;
+//
+//                    case "}":
+//
+//                        mensajes.setText(mensajes.getText() + "Error sintactico linea " + linea + ": Se esperaba una llabe de cierre '}' \n");
+//                        break;
+//
+//                    case "(":
+//
+//                        mensajes.setText(mensajes.getText() + "Error sintactico linea " + linea + ": Se esperaba una parentecis de apertura '(' \n");
+//                        break;
+//
+//                    case ")":
+//
+//                        mensajes.setText(mensajes.getText() + "Error sintactico linea " + linea + ": Se esperaba una parentecis de cierre ')' \n");
+//                        break;
+//
+//                    case "L":
+//
+//                        mensajes.setText(mensajes.getText() + "Error sintactico linea " + linea + ": Se esperaban argumentos \n");
+//                        break;
+//
+//                    case "T'":
+//                        if (token.equals(",")) {
+//                            mensajes.setText(mensajes.getText() + "Error sintactico linea " + linea + ": no puede seguir un ' , ' \n");
+//                        } else {
+//                            mensajes.setText(mensajes.getText() + "Error sintactico linea " + linea + ": Se esperaban algun operador o comparacion \n");
+//                        }
+//                        break;
+//
+//                    case ";":
+//
+//                        mensajes.setText(mensajes.getText() + "Error sintactico linea " + linea + ": Se esperaba ;  \n");
+//
+//                        break;
+//
+//                    case "sigid":
+//
+//                        mensajes.setText(mensajes.getText() + "Error sintactico linea " + linea + ": Se esperaba ;  \n");
+//
+//                        break;
+//                        
+//                        case "=":
+//                        if(!token.equals(pila.peek())){
+//                            mensajes.setText(mensajes.getText() + "Error sintactico linea " + linea + ": Se esperaba =  \n");
+//                        }
+//                        break;
+//                        
+//                        case "sentencias":
+//                        mensajes.setText(mensajes.getText() + "Error sintactico linea " + linea + ": Se esperaba una sentencia  \n");
+//
+//                        break;
+//                }
+//
+//                System.out.println(pila.toString());
+//                modeloTabla.addRow(new Object[]{pila.toString(), token, accion, indice});
+//
+//                return;
+//
+//            } else if (accion == "sacar ") {
+//
+//                switch (pila.peek()) {
+//                    case "prog ":
+//
+//                        if (banpr) {
+//
+//                            mensajes.setText(mensajes.getText() + "Error sintactico linea " + linea + ": Se esperaba la palabra 'Inicio' \n");
+//
+//                            banpr = false;
+//                        }
+//                        break;
+//
+//                    case "id":
+//
+//                        mensajes.setText(mensajes.getText() + "Error sintactico linea " + linea + ": Se esperaba un id \n");
+//                        break;
+//
+//                    case "{":
+//
+//                        mensajes.setText(mensajes.getText() + "Error sintactico linea " + linea + ": Se esperaba una llabe de apertura '{' \n");
+//                        break;
+//
+//                    case "}":
+//
+//                        mensajes.setText(mensajes.getText() + "Error sintactico linea " + linea + ": Se esperaba una llabe de cierre '}' \n");
+//                        break;
+//
+//                    case "(":
+//
+//                        mensajes.setText(mensajes.getText() + "Error sintactico linea " + linea + ": Se esperaba una parentecis de apertura '(' \n");
+//                        break;
+//
+//                    case ")":
+//
+//                        mensajes.setText(mensajes.getText() + "Error sintactico linea " + linea + ": Se esperaba una parentecis de cierre ')' \n");
+//                        break;
+//
+//                    case "L":
+//
+//                        mensajes.setText(mensajes.getText() + "Error sintactico linea " + linea + ": Se esperaban argumentos \n");
+//                        break;
+//
+//                    case "T'":
+//
+//                        mensajes.setText(mensajes.getText() + "Error sintactico linea " + linea + ": Se esperaban ; \n");
+//
+//                        break;
+//
+//                    case "sigid":
+//
+//                        mensajes.setText(mensajes.getText() + "Error sintactico linea " + linea + ": Se esperaba ;  \n");
+//
+//                        break;
+//                    case "dec":
+//                        // verifica si el token no es un tipo de dato
+//                        if (!tipo(token)) {
+//                            mensajes.setText(mensajes.getText() + "Error sintactico linea " + linea + ": Se esperaba tipo  \n");
+//                        }
+//                        break;
+//
+//                }
+//
+//                modeloTabla.addRow(new Object[]{pila.toString(), token, accion, indice});
+//                System.out.println(pila.toString());
+//
+//                System.out.println("ERROR: Antes del pop habia:  " + token);
+//                pila.pop();
+//                System.out.println("ERROR: Despues del pop habia:  " + token);
+//                this.AnalisisSintactico(token, linea,caracter);//Sigue con el mismo token   
+//
+//            } else if (accion == "0 ") {
+//
+//                modeloTabla.addRow(new Object[]{pila.toString(), token, accion, indice});
+//                System.out.println(pila.toString());
+//                pila.pop();
+//                this.AnalisisSintactico(token, linea,caracter);//Sigue con el mismo toke  
+//
+//            } else {
+//                ///PILA AUXILIAR
+//
+//                String palabras = ""; //Almacena las palabras de la cadena
+//                //modeloTabla.addRow(new Object[]{pila.toString(), token, accion, indice});
+//                //System.out.println(pila.toString());
+//                
+//                pila.pop();
+//                for (int j = 0; j < accion.length(); j++) //Si el caracter no es un espacio en blanco entonces se concatena pal
+//                {
+//
+//                    if (accion.charAt(j) != ' ') {
+//                        palabras += accion.charAt(j) + "";
+//                    } //Si es un espacio en blanco indica que se completo una palabra y entonces se agrega la pila auxiliar
+//                    else {
+//                        pilaaux.push(palabras); //Agrega la palabra a la pila auxiliar
+//                        palabras = "";
+//                    }
+//                }
+//                do {
+//                    pila.push(pilaaux.pop()); //Agrega los elementos de la pila auxiliar a la pila original
+//                } while (!pilaaux.isEmpty());
+//
+//                modeloTabla.addRow(new Object[]{pila.toString(), token, accion, indice});
+//                System.out.println(pila.toString());
+//
+//                this.AnalisisSintactico(token, linea,caracter);//Sigue con el mismo token
+//
+//            }
+//
+//        } catch (Exception e) {
+//            System.out.println("cdscsdx");
+//        }
+//
+//    }
+//
+//    private boolean tipo(String token) {
+//        List<String> tipos = Arrays.asList("ent", "texto", "flot", "dbl", "char", "bool");
+//        boolean resultado = tipos.contains(token);
+//        return resultado;
+//    }
+//
+//    private void llenarPila() {
+//        tokens.forEach(token -> {
+//
+//            variable = token.getLine();
+//
+//            //Imprimir el token en mi JTextpanel de mi analizador lexico 
+//            if (token.getLexicalComp() == "pReservada" || token.getLexicalComp() == "tipoDa") {
+//
+//                AnalisisSintactico(token.getLexeme(), token.getLine(),token.getLexeme());
+//            }  else if (token.getLexicalComp() == "ERROR") {
+//                 AnalisisSintactico(token.getLexicalComp(), token.getLine(),token.getLexeme());
+//            }else {
+//
+//                AnalisisSintactico(token.getLexicalComp(), token.getLine(),token.getLexeme());
+//
+//            }
+//        });
+//        
+//         mensajes.setText(mensajes.getText() + "Analisis terminado...");
+//    }
+//    private boolean terminal(String Ptoken,String token){
+//        for (String encabezadosColumna : encabezadosColumnas) {
+//            if(encabezadosColumna.equals(Ptoken)){
+//                return !Ptoken.equals(token);
+//            }
+//        }
+//        return false;
+//    }
+//    private void llenarJPnaleTokens() {
+//        tokens.forEach(token -> {
+//
+//            variable = token.getLine();
+//
+//            //solucion rapida para imprimir el salto de linea casda que se encuentre cambio en la linea 
+//            if (variable != valorAnterior) {
+//                lexico.setText(lexico.getText() + "\n");// Imprimir salto de línea
+//                valorAnterior = token.getLine();
+//            }
+//            if (token.getLexicalComp() == "pReservada" || token.getLexicalComp() == "tipoDa") {
+//
+//                lexico.setText(lexico.getText() + " " + token.getLexeme());
+//                //Imprimir el token en mi JTextpanel de mi analizador lexico 
+//            } else if (token.getLexicalComp() == "ERROR") {
+//                lexico.setText(lexico.getText() + " ");
+//            } else {
+//
+//                lexico.setText(lexico.getText() + " " + token.getLexicalComp());
+//            }
+//
+//        });
+//    }
+
+//    //ESTE METODO ES DE MARTIN SABRA DIOS DE DONDE SE SACO ESA SOLUCION PROVICIONAL XD
     @SuppressWarnings("unchecked")
     // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
     private void initComponents() {
@@ -858,39 +888,38 @@ public class Com extends javax.swing.JFrame {
 
     private void bRunActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_bRunActionPerformed
         StyledDocument doc = escritura.getStyledDocument();
-            try{
-                if (doc.getLength() > 0 && doc.getText(doc.getLength() - 1, 1).equals("$")) {
-                // No se agrega otro símbolo de dólar ($) si ya existe
-            } else {
-                // Inserta el símbolo de dólar ($) al final del texto
-                doc.insertString(doc.getLength(), "$", null);
-               
-            }
-            }catch(BadLocationException e){
-                
-            }
-        pila.clear();
-        pilaaux.clear();
-        banP = true;
-        banpr = true;
-        renglones = 0;
-        columnas = 0;
-        mensajes.setText("");
-        
-        
-        if (escritura.getText().isEmpty()){
-         mensajes.setText("No hay nada que analizar");
-        
-        }else {
-          borrarComponentes();
-        analisisLexico();
-        llenarJPnaleTokens();
-        analisisLexicoEerr();
-        AnalisisSintacticoInicioPila();
-        llenarPila();
-        //noDuplicados();
-        
+        try{
+            if (doc.getLength() > 0 && doc.getText(doc.getLength() - 1, 1).equals("$")) {
+            // No se agrega otro símbolo de dólar ($) si ya existe
+        } else {
+            // Inserta el símbolo de dólar ($) al final del texto
+            doc.insertString(doc.getLength(), "$", null);
         }
+        }catch(BadLocationException e){
+
+        }
+        this.Inicializa();
+
+//        banP = true;
+//        banpr = true;
+//        renglones = 0;
+//        columnas = 0;
+//        mensajes.setText("");
+//        
+//        
+//        if (escritura.getText().isEmpty()){
+//         mensajes.setText("No hay nada que analizar");
+//        
+//        }else {
+//          borrarComponentes();
+//        analisisLexico();
+//        llenarJPnaleTokens();
+//        analisisLexicoEerr();
+//        AnalisisSintacticoInicioPila();
+//        llenarPila();
+//        noDuplicados();
+//        
+//        }
 
         
         
@@ -928,19 +957,13 @@ public class Com extends javax.swing.JFrame {
     }//GEN-LAST:event_jMenuItem2ActionPerformed
 
     private void jMenuItem4ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jMenuItem4ActionPerformed
-        pila.clear();
-        pilaaux.clear();
-        banP = true;
-        banpr = true;
-        renglones = 0;
-        columnas = 0;
-
-        borrarComponentes();
-        analisisLexico();
-        llenarJPnaleTokens();
-        analisisLexicoEerr();
-        AnalisisSintacticoInicioPila();
-        llenarPila();
+//        pila.clear();
+//        borrarComponentes();
+//        analisisLexico();
+//        llenarJPnaleTokens();
+//        analisisLexicoEerr();
+//        AnalisisSintacticoInicioPila();
+//        llenarPila();
         //imprimirConsola();        // TODO add your handling code here:
     }//GEN-LAST:event_jMenuItem4ActionPerformed
 
@@ -965,106 +988,11 @@ public class Com extends javax.swing.JFrame {
         valorAnterior = 1;
         variable = 1;
         mensajes.setText("");
-        tokens.clear();
+        
         // errors.clear();
         // identProd.clear();
         // identificadores.clear();
     }
-    
-    
-     // ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-    // COLOREAR LAS COSAS
-    // ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-    //METODO PARA ENCONTRAR LAS ULTIMAS CADENAS
-    private int findLastNonWordChar(String text, int index) {
-        while (--index >= 0) {
-            //  \\W = [A-Za-Z0-9]
-            if (String.valueOf(text.charAt(index)).matches("\\W")) {
-                break;
-            }
-        }
-        return index;
-    }
-
-    //METODO PARA ENCONTRAR LAS PRIMERAS CADENAS 
-    private int findFirstNonWordChar(String text, int index) {
-        while (index < text.length()) {
-            if (String.valueOf(text.charAt(index)).matches("\\W")) {
-                break;
-            }
-            index++;
-        }
-        return index;
-    }   
- //METODO PARA PINTAS LAS PALABRAS RESEVADAS
-    private void colors() {
-
-        final StyleContext cont = StyleContext.getDefaultStyleContext();
-
-        //COLORES 
-        final AttributeSet attred = cont.addAttribute(cont.getEmptySet(), StyleConstants.Foreground, new Color(225, 123, 13));//naranja
-        final AttributeSet attgreen = cont.addAttribute(cont.getEmptySet(), StyleConstants.Foreground, new Color(48, 101, 59)); //verde
-        final AttributeSet attblue = cont.addAttribute(cont.getEmptySet(), StyleConstants.Foreground, new Color(0, 0, 0)); //Blanco
-        final AttributeSet attblack = cont.addAttribute(cont.getEmptySet(), StyleConstants.Foreground, new Color(145, 55, 76));
-        final AttributeSet blanco = cont.addAttribute(cont.getEmptySet(), StyleConstants.Foreground, new Color(0, 0, 0)); //Blanco
-        //STYLO 
-        DefaultStyledDocument doc = new DefaultStyledDocument() {
-            public void insertString(int offset, String str, AttributeSet a) throws BadLocationException {
-                super.insertString(offset, str, a);
-
-                String text = getText(0, getLength());
-                int before = findLastNonWordChar(text, offset);
-                if (before < 0) {
-                    before = 0;
-                }
-                int after = findFirstNonWordChar(text, offset + str.length());
-                int wordL = before;
-                int wordR = before;
-
-                while (wordR <= after) {
-                    if (wordR == after || String.valueOf(text.charAt(wordR)).matches("\\W")) {
-                        if (text.substring(wordL, wordR).matches("(\\W)*()")) { //Azul 
-                            setCharacterAttributes(wordL, wordR - wordL, attblue, false);
-                        } else if (text.substring(wordL, wordR).matches("(\\W)*(para|verdadero|falso|mensaje|lectura)")) { //verde
-                            setCharacterAttributes(wordL, wordR - wordL, attgreen, false);
-                        } else if (text.substring(wordL, wordR).matches("(\\W)*(Inicio|metodo|si|sino|hacer|mientras)")) { // blanco
-                            setCharacterAttributes(wordL, wordR - wordL, attred, false);
-                        } 
-                         else if (text.substring(wordL, wordR).matches("(\\W)*($)")) { // blanco
-                            setCharacterAttributes(wordL, wordR - wordL, blanco, false);
-                        
-                         }else {
-                            setCharacterAttributes(wordL, wordR - wordL, attblack, false);
-                        }
-                        wordL = wordR;
-
-                    }
-                    wordR++;
-                }
-            }
-
-            public void romeve(int offs, int len) throws BadLocationException {
-                super.remove(offs, len);
-
-                String text = getText(0, getLength());
-                int before = findLastNonWordChar(text, offs);
-                if (before < 0) {
-                    before = 0;
-                }
-            }
-        };
-
-        JTextPane txt = new JTextPane(doc);
-        String temp = escritura.getText();
-        escritura.setStyledDocument(txt.getStyledDocument());
-        escritura.setText(temp);
-
-    }
-
-    // ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-    
-    
 
     public static void main(String args[]) {
 
