@@ -33,13 +33,16 @@ public class Com extends javax.swing.JFrame {
     private Directory directorio;
     //Cosas
     Stack<String> pilaSintactica = new Stack<>();
+    Stack<Integer> pilaSemantica = new Stack<>();
+    Stack<Integer> pilaOperadores = new Stack<>();
     private DefaultTableModel modeloTabla;
-    int estadoSintactico, posicionEntrada;
+    int estadoSintactico, posicionEntrada, tipoDato, datoAsignacion;
     int eliminacionProduccion[] = {0,6,12,0,6,0,10,8,8,8,8,0,18,4,2,6,2,2,2,2,4,4,4,6,6,6,6,6,6,0,6,6,0,4,6,0,6,6,0,4,6,6,0,2,2,2,6,2,2,2};
     Token token;
+    HashMap<String, Integer> tablaSimbolos = new HashMap<>();
     Vector<String> tokenEsperados = new Vector<>(1,1);
     boolean banProduccion = false;
-    String estadoPila = "", errorMsg = "";
+    String estadoPila = "", errorMsg = "", identificadorTemporal = "";
     String produccionTerminal[] = {"programa'", "programa", "declaracion", "declaracion", "sig_declaracion", "sig_declaracion", "bloque", "bloque", "bloque", "bloque", "bloque", "bloque", "for_expresion", "incremento", "inc", "sentencias", "tipo", "tipo", "tipo", "tipo", "expresion", "expresion", "R", "R'", "R'", "R'", "R'", "R'", "R'", "R'", "L", "L", "L", "Exp", "Exp", "Exp", "E'", "E'", "E'", "Term", "T'", "T'", "T'", "Factor", "Factor", "Factor", "Factor", "Factor", "Factor", "inc"};
     //Variables que uso para contar cosas NO SON MUY NECESARIAS
 
@@ -169,7 +172,10 @@ public class Com extends javax.swing.JFrame {
 /*q111*/{"-1", "I3", "-1", "-1", "-1", "P3", "P3", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "P3", "-1", "-1", "-1", "-1", "-1", "-1", "P3", "P3", "-1", "-1", "I112", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1"},
 /*q112*/{"-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "P2", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1"}};
     
-    
+    int tablaSemantica[][] = {
+        { 0, 1,-1,-1},
+        { 1, 1,-1,-1},
+        {-1,-1,-1, 3}};
     
     NumeroLinea numeroLinea;
 
@@ -261,6 +267,21 @@ public class Com extends javax.swing.JFrame {
                     this.Error("Lexico", token.getLine(), token.getLexeme());
                     break;
                 }
+                switch(token.getLexicalComp())
+                {
+                    case "Entero":
+                        tipoDato = 0;
+                        break;
+                    case "Flotante":
+                        tipoDato = 1;
+                        break;
+                    case "Char":
+                        tipoDato = 2;
+                        break;
+                    case "Bool":
+                        tipoDato = 3;
+                        break;
+                }
                 // cada vez que saca un componente lexico lo manda al analisis sintactico
                 this.AnalizadorSintactico(token.getLexicalComp());
             }
@@ -294,6 +315,7 @@ public class Com extends javax.swing.JFrame {
     @SuppressWarnings("empty-statement")
     public void DesplasarEstado(String token)
     {
+        String estadosId[] = {"I5","I104","I57","I58"};
         estadoPila = pilaSintactica.peek().substring(1);
         estadoSintactico = Integer.parseInt(estadoPila);
         for(posicionEntrada = 0; posicionEntrada < encabezadosColumnas.length && !encabezadosColumnas[posicionEntrada].equals(token); posicionEntrada++);
@@ -303,6 +325,12 @@ public class Com extends javax.swing.JFrame {
             case 'I':
                 pilaSintactica.push(token);
                 pilaSintactica.push(tablaSintactica[estadoSintactico][posicionEntrada]);
+                //Me faltan poner estados en esta parte
+                if(pilaSintactica.peek().equals("I32") || pilaSintactica.peek().equals("I82"))
+                    this.TablaSimbolos();
+                for(String var : estadosId)
+                    if(pilaSintactica.peek().equals(var))
+                        this.ValidarIdentificadorSemantico();
                 break;
             case 'P': 
                 this.Produccion(token);
@@ -335,6 +363,134 @@ public class Com extends javax.swing.JFrame {
         {
             banProduccion = false;
         }
+    }
+    public void TablaSimbolos()
+    {
+        boolean repetida = true;
+        
+        if(!tablaSimbolos.isEmpty())
+            for(String var : tablaSimbolos.keySet())
+                if(token.getLexeme().equals(var))
+                    repetida = false;
+        if(repetida)
+        {
+            tablaSimbolos.put(token.getLexeme(), tipoDato);
+            
+        }
+        else
+            this.Error("Semantico", token.getLine(), "No se pueden declarar identificadores iguales");
+    }
+    public void ValidarIdentificadorSemantico()
+    {
+        boolean banTabla = false;
+        if(!tablaSimbolos.isEmpty())
+            for(String var : tablaSimbolos.keySet())
+                if(token.getLexeme().equals(var))
+                    banTabla = true;
+        if(banTabla)
+        {
+            identificadorTemporal = token.getLexeme();
+            datoAsignacion = tablaSimbolos.get(token.getLexeme());
+        }
+        else
+            this.Error("Semantico", token.getLine(), "No puedes utilizar un identificador que no a sido declarado");
+    }
+    public void AnalizadorSemantico()
+    {
+        boolean banIdentificador = false;
+        String operadoresLogicos[] = {"<",">","<=",">=","!","!=","==","&&","||"};
+        if(token.getLexicalComp().equals("id"))
+        {
+            for(String id : tablaSimbolos.keySet())
+                if(token.getLexeme().equals(id))
+                    banIdentificador = true;
+            if(banIdentificador)
+            {
+                pilaSemantica.push(tablaSimbolos.get(token.getLexeme()));
+            }
+            else
+                this.Error("Semantico", token.getLine(), "No se puede realizar una operacion con un identificador no declarado");
+        }
+        else
+            if(token.getLexicalComp().equals("num"))
+                pilaSemantica.push(0);
+            else
+                if(token.getLexicalComp().equals("char"))
+                    pilaSemantica.push(2);
+                else
+                    if(token.getLexicalComp().equals("VERDADERO") || token.getLexicalComp().equals("FALSO"))
+                        pilaSemantica.push(3);
+                    else
+                        if(token.getLexicalComp().equals("+") || token.getLexicalComp().equals("-"))
+                            this.AccionesOperadores(0);
+                        else
+                            if(token.getLexicalComp().equals("*") || token.getLexicalComp().equals("/"))
+                                this.AccionesOperadores(1);
+                            else
+                                if(token.getLexicalComp().equals("("))
+                                    this.AccionesOperadores(2);
+                                else
+                                    if(token.getLexicalComp().equals(")"))
+                                        this.AccionesOperadores(3);
+                                    else
+                                        for(String var : operadoresLogicos)
+                                            if(token.getLexicalComp().equals(var))
+                                                this.AccionesOperadores(4);
+    }
+    public void AccionesOperadores(int valor)
+    {
+        if(pilaOperadores.isEmpty())
+            pilaOperadores.push(valor);
+        else
+            switch(valor)
+            {
+                case 2:
+                    pilaOperadores.push(valor);
+                    break;
+                case 3:
+                    for(int var : pilaOperadores)
+                        if(var == 2)
+                        {
+                            pilaOperadores.pop();
+                            break;
+                        }
+                        else
+                            this.AccionesDatos(pilaOperadores.pop());
+                    break;
+                default:
+                    do
+                        if(pilaOperadores.peek() <= valor)
+                            this.AccionesDatos(pilaOperadores.pop());
+                        else
+                            break;
+                    while(!pilaOperadores.isEmpty());
+                    pilaOperadores.push(valor);
+                    
+            }
+    }
+    public void AccionesDatos(int valor)
+    {
+        int valor1, valor2, resultado;
+        valor1 = pilaSemantica.pop();
+        valor2 = pilaSemantica.pop();
+        if(valor != 4)
+            resultado = tablaSemantica[valor1][valor2];
+        else
+            resultado = 3;
+        
+        if(resultado != -1)
+        {
+            pilaSemantica.push(resultado);
+        }
+        else
+            this.Error("Semantico", token.getLine(), "La operacion no se puede realizar problemas con tipos de datos");
+    }
+    public void AccionExpresion()
+    {
+        while(!pilaOperadores.isEmpty())
+            this.AccionesDatos(pilaOperadores.pop());
+        if(datoAsignacion != pilaSemantica.pop())
+            this.Error("Semantico", token.getLine(), "No se puede realizar una asignacion con diferentes tipos de datos");
     }
     public void Error(String tipoError, int numeroLinea, String token)
     {
