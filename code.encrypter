@@ -1,3 +1,5 @@
-var Entero x,y;
-x = 5;
-.$
+var Entero a, b, c;
+for( a = b + c, a > b, a--)
+{
+a = b;
+}.
