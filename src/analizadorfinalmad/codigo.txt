@@ -1,6 +1,6 @@
 var Entero x,y;
-read() = x;
-read() = y;
+read = x;
+read = y;
 if ( x == y ) {
 print(“los 2 números son iguales”);
 }
