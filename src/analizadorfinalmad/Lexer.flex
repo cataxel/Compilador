@@ -35,11 +35,11 @@ espacio=[ ,\t,\r]+
 comillas=[\"]+
 comillasS=[']+
 simbolos=[\!,#,$,%,&,\(,\),*,\+,\,,\-,\.,/,:,;,<,=,>,?,@,\[,\],\^,_,`,{,|,},¿]+
-ReservadasP= Inicio|metodo|si|sino|hacer|mientras|para|verdadero|falso|mensaje|lectura|llamar
+ReservadasP= read|print|if|for|VERDADERO|FALSO|var
 
 
 /*Tipos de Datos*/
-ReservadasD= ent|texto|flot|dbl|bool|char
+ReservadasD= Entero|Bool|Char|Cadena
 
 /* Identificador */
 Letra = [A-Za-zÑñ_ÁÉÍÓÚáéíóúÜü]
@@ -54,13 +54,13 @@ CaracterE = "'" [^'\n\\']* "'"
 
 
 /* Literal Cadena */
-{Cadena} { return token(yytext(), "litCad", yyline, yycolumn);}
+{Cadena} { return token(yytext(), "cadena", yyline, yycolumn);}
 
 /* Literal Caracter */
-{Caracter} { return token(yytext(), "litCar", yyline, yycolumn);}
+{Caracter} { return token(yytext(), "char", yyline, yycolumn);}
 
-{comillasS}({letra}|{digito}){comillasS} {return token(yytext(), "litCar", yyline, yycolumn);}
-{comillas}({letra}|{digito}|{espacio}|{simbolos})*{comillas} {return token(yytext(), "litCad", yyline, yycolumn);}
+{comillasS}({letra}|{digito}){comillasS} {return token(yytext(), "char", yyline, yycolumn);}
+{comillas}({letra}|{digito}|{espacio}|{simbolos})*{comillas} {return token(yytext(), "cadena", yyline, yycolumn);}
 
 
 /* Palabras Reservadas */
@@ -92,9 +92,10 @@ CaracterE = "'" [^'\n\\']* "'"
 [*] { return token(yytext(), "*", yyline, yycolumn); }
 [/] { return token(yytext(), "/", yyline, yycolumn); }
 
-[=][=] { return token(yytext(), "#", yyline, yycolumn); }
+[=][=] { return token(yytext(), "==", yyline, yycolumn); }
 [!][=] { return token(yytext(), "!=", yyline, yycolumn); }
 [-][-] { return token(yytext(), "--", yyline, yycolumn); }
+[+][+] { return token(yytext(), "++", yyline, yycolumn); }
 [<] { return token(yytext(), "<", yyline, yycolumn); }
 [>] { return token(yytext(), ">", yyline, yycolumn); }
 [<][=] { return token(yytext(), "<=", yyline, yycolumn); }
