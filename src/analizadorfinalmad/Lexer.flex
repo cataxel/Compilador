@@ -34,8 +34,6 @@ digito=[-+]?[0-9]+|[-+]?[0-9]+
 espacio=[ ,\t,\r]+
 comillas=[\"]+
 comillasS=[']+
-simbolos=[\!,#,$,%,&,\(,\),*,\+,\,,\-,\.,/,:,;,<,=,>,?,@,\[,\],\^,_,`,{,|,},¿]+
-ReservadasP= read|print|if|for|VERDADERO|FALSO|var
 simbolos=[;,+,-,*,/,(,)]+
 ReservadasP= read|print|if|for|VERDADERO|FALSO|var
 
@@ -55,14 +53,6 @@ CaracterE = "'" [^'\n\\']* "'"
 {Comentario}|{EspacioEnBlanco} { /*Ignorar*/ }
 
 
-/* Literal Cadena */
-{Cadena} { return token(yytext(), "cadena", yyline, yycolumn);}
-
-/* Literal Caracter */
-{Caracter} { return token(yytext(), "char", yyline, yycolumn);}
-
-{comillasS}({letra}|{digito}){comillasS} {return token(yytext(), "char", yyline, yycolumn);}
-{comillas}({letra}|{digito}|{espacio}|{simbolos})*{comillas} {return token(yytext(), "cadena", yyline, yycolumn);}
 
 
 /* Palabras Reservadas */
@@ -77,6 +67,14 @@ CaracterE = "'" [^'\n\\']* "'"
 /* Numeros */
 {Numero} { return token(yytext(), "num", yyline, yycolumn);}
 
+/* Literal Cadena */
+{Cadena} { return token(yytext(), "cadena", yyline, yycolumn);}
+
+/* Literal Caracter */
+{Caracter} { return token(yytext(), "char", yyline, yycolumn);}
+
+{comillasS}({letra}|{digito}){comillasS} {return token(yytext(), "char", yyline, yycolumn);}
+{comillas}({letra}|{digito}|{espacio}|{simbolos})*{comillas} {return token(yytext(), "cadena", yyline, yycolumn);}
 
 
 /* c */

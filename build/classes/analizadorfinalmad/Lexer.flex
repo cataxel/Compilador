@@ -67,6 +67,14 @@ CaracterE = "'" [^'\n\\']* "'"
 /* Numeros */
 {Numero} { return token(yytext(), "num", yyline, yycolumn);}
 
+/* Literal Cadena */
+{Cadena} { return token(yytext(), "cadena", yyline, yycolumn);}
+
+/* Literal Caracter */
+{Caracter} { return token(yytext(), "char", yyline, yycolumn);}
+
+{comillasS}({letra}|{digito}){comillasS} {return token(yytext(), "char", yyline, yycolumn);}
+{comillas}({letra}|{digito}|{espacio}|{simbolos})*{comillas} {return token(yytext(), "cadena", yyline, yycolumn);}
 
 
 /* c */
@@ -87,6 +95,7 @@ CaracterE = "'" [^'\n\\']* "'"
 [=][=] { return token(yytext(), "==", yyline, yycolumn); }
 [!][=] { return token(yytext(), "!=", yyline, yycolumn); }
 [-][-] { return token(yytext(), "--", yyline, yycolumn); }
+[+][+] { return token(yytext(), "++", yyline, yycolumn); }
 [<] { return token(yytext(), "<", yyline, yycolumn); }
 [>] { return token(yytext(), ">", yyline, yycolumn); }
 [<][=] { return token(yytext(), "<=", yyline, yycolumn); }
