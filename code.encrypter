@@ -1,9 +1,9 @@
-var Entero x,y;
+var Entero x,y,i;
 read = x;
 read = y;
-if ( x == y ) {
-print(“los 2 números son iguales”);
+if  x == y {
+print( y )
 }
-for(Entero i, i < 10, i ++){
-print(“hola”);
-}
+for(i=10, i < 10, i++){
+print( x )
+}.

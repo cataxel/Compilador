@@ -17,12 +17,12 @@ import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Set;
 import java.util.Stack;
+import java.util.StringTokenizer;
 import java.util.Vector;
+import java.util.stream.Collectors;
+import static javax.management.Query.value;
 import javax.swing.JTextPane;
 import javax.swing.Timer;
 import javax.swing.table.DefaultTableModel;
@@ -40,23 +40,26 @@ public class Com extends javax.swing.JFrame {
     Stack<String> pilaSintactica = new Stack<>();
     Stack<Integer> pilaSemantica = new Stack<>();
     Stack<Integer> pilaOperadores = new Stack<>();
+    Stack<String> operadores = new Stack<>();
     private DefaultTableModel modeloTabla;
-    int estadoSintactico, posicionEntrada, tipoDato, datoAsignacion, linea = 1;
-    int eliminacionProduccion[] = {0,6,12,0,6,0,10,8,8,8,8,0,18,4,2,6,2,2,2,2,4,4,4,6,6,6,6,6,6,0,6,6,0,4,6,0,6,6,0,4,6,6,0,2,2,2,6,2,2,2};
+    int estadoSintactico, posicionEntrada, tipoDato, datoAsignacion, linea = 1, variable = 0;
+    int eliminacionProduccion[] = {0,6,12,0,6,0,10,8,8,10,10,0,18,4,2,6,2,2,2,2,4,4,4,6,6,6,6,6,6,0,6,6,0,4,6,0,6,6,0,4,6,6,0,2,2,2,6,2,2,2};
     Token token;
     HashMap<String, Integer> tablaSimbolos = new HashMap<>();
     Vector<String> tokenEsperados = new Vector<>(1,1);
-    boolean banProduccion = false, banCondicional = false, banError = false, banIf = false;
-    String estadoPila = "", errorMsg = "";
-    String produccionTerminal[] = {"programa'", "programa", "declaracion", "declaracion", "sig_declaracion", "sig_declaracion", "bloque", "bloque", "bloque", "bloque", "bloque", "bloque", "for_expresion", "incremento", "inc", "sentencias", "tipo", "tipo", "tipo", "tipo", "expresion", "expresion", "R", "R'", "R'", "R'", "R'", "R'", "R'", "R'", "L", "L", "L", "Exp", "Exp", "Exp", "E'", "E'", "E'", "Term", "T'", "T'", "T'", "Factor", "Factor", "Factor", "Factor", "Factor", "Factor", "inc"};
+    boolean banProduccion = false, banCondicional = false, banError = false, banIf = false, banFor = false, banEndFor = false;
+    String estadoPila = "", errorMsg = "", codigoIntermedio = "", valorExpresion = "", incremento = "";
+    String produccionTerminal[] = {"programa'", "programa", "declaracion", "declaracion", "sig_declaracion", "sig_declaracion", "bloque", "bloque", "bloque", "bloque", "bloque", "bloque", "for_expresion", "incremento", "inc", "sentencia", "tipo", "tipo", "tipo", "tipo", "expresion", "expresion", "R", "R'", "R'", "R'", "R'", "R'", "R'", "R'", "L", "L", "L", "Exp", "Exp", "Exp", "E'", "E'", "E'", "Term", "T'", "T'", "T'", "Factor", "Factor", "Factor", "Factor", "Factor", "Factor", "inc"};
+    
     //Variables que uso para contar cosas NO SON MUY NECESARIAS
 
     private String title;
     private Timer timerKeyReleased;
-    String encabezadosColumnas[] = {".", "var", ";", ",", "=", "if", "for", "!", "{", "}", "(", ")", "&&", "||", "<", ">", "<=", ">=", "!=", "==", "+", "-", "*", "/", "++", "--", "VERDADERO", "FALSO", "id", "num", "char", "Entero", "Flotante", "Char", "Bool", "read", "print", "$", "programa", "declaracion", "sig_declaracion", "bloque", "for_expresion", "incremento", "tipo", "expresion", "sentencia", "R", "L", "R'", "Exp", "E'", "Term", "T'", "Factor", "inc"};
+   
+      String encabezadosColumnas[] = {".", "var", ";", ",", "=", "if", "for", "?", "{", "}", "(", ")", "&&", "||", "<", ">", "<=", ">=", "!=", "==", "+", "-", "*", "/", "++", "--", "VERDADERO", "FALSO", "id", "num", "char", "Entero", "Flotante", "Char", "Bool", "read", "print", "$", "programa", "declaracion", "sig_declaracion", "bloque", "for_expresion", "incremento", "tipo", "expresion", "sentencia", "R", "L", "R'", "Exp", "E'", "Term", "T'", "Factor", "inc"};
     
     // Tabla de respaldo por si se desmadra
-   String tablaSintactica[][] = {
+    String tablaSintactica[][] = {
         //    .	     var     ;      ,      =	 if     for    !      {	      }	    (       )     &&     ||     <      >      <=      >=    !=	   ==      +     -      *      /      ++     --  VERDADEROFALSO   id    num    charEntero Flotante  Char   Bool   read   print   $  programa declar sig_dec bloquefor_exp increm tipo  expre  senten  <R>     <L>   <R'>   <Exp>  <E'>  <Term>  <T'> <Factor> <inc>
     /*q0*/{  "P3",  "I3",  "-1",  "-1",  "-1",  "P3",  "P3",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "P3",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "P3",  "P3",  "-1",  "I1",  "I2",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1"},
     /*q1*/{  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "P0",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1"},
@@ -140,6 +143,8 @@ public class Com extends javax.swing.JFrame {
    /*q79*/{  "-1",  "-1", "P35", "P35",  "-1",  "-1",  "-1",  "-1", "P35",  "-1", "I26", "P35", "P35", "P35", "P35", "P35", "P35", "P35", "P35", "P35",  "-1", "I21",  "-1",  "-1",  "-1",  "-1","I109","I110", "I23", "I24", "I25",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1", "I98",  "-1", "I20",  "-1", "I22",  "-1"},
    /*q80*/{"P11", "-1", "-1", "-1", "-1", "I6", "I7", "-1", "-1", "P11", "-1", "P11", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "I9", "I8", "-1", "-1", "-1", "-1", "I113", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1"},
    /*q81*/{"P11", "-1", "-1", "-1", "-1", "I6", "I7", "-1", "-1", "P11", "-1", "P11", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "I5", "-1", "-1", "-1", "-1", "-1", "-1", "I9", "I8", "-1", "-1", "-1", "-1", "I114", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1"},
+   /*q80*/{ "P11",  "-1",  "-1",  "-1",  "-1",  "I6",  "I7",  "-1",  "-1", "P11",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "I5",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "I9",  "I8",  "-1",  "-1",  "-1",  "-1","I113",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1"},
+   /*q81*/{ "P11",  "-1",  "-1",  "-1",  "-1",  "I6",  "I7",  "-1",  "-1", "P11",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "I5",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "I9",  "I8",  "-1",  "-1",  "-1",  "-1","I114",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1"},
    /*q82*/{  "-1",  "-1",  "P5", "I60",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1", "I99",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1"},
    /*q83*/{  "P6",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "P6",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1"},
    /*q84*/{ "P15",  "-1",  "-1",  "-1",  "-1", "P15", "P15",  "-1",  "-1", "P15",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1", "P15",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1", "P15", "P15",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1"},
@@ -171,10 +176,9 @@ public class Com extends javax.swing.JFrame {
   /*q110*/{  "-1",  "-1", "P48", "P48",  "-1",  "-1",  "-1",  "-1", "P48",  "-1",  "-1", "P48", "P48", "P48", "P48", "P48", "P48", "P48", "P48", "P48", "P48", "P48", "P48", "P48",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1"},
   /*q111*/{  "-1",  "I3",  "-1",  "-1",  "-1",  "P3",  "P3",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "P3",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "P3",  "P3",  "-1",  "-1","I112",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1"},
   /*q112*/{  "P2",  "-1",  "-1",  "-1",  "-1",  "P2",  "P2",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "P2",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "P2",  "P2",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1"},
-  /*q113*/{"P9", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "P9", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "P9", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1"},
-  /*q114*/{"P10", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "P10", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "P10", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1", "-1"}
-}; 
-      
+  /*q113*/{  "P9",  "-1",  "-1",  "-1",  "-1",  "P2",  "P2",  "-1",  "-1",  "P9",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1"},
+  /*q114*/{ "P10",  "-1",  "-1",  "-1",  "-1",  "P2",  "P2",  "-1",  "-1", "P10",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "P2",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1"}}; 
+   
     int tablaSemantica[][] = {
         { 0, 1,-1,-1},
         { 1, 1,-1,-1},
@@ -184,10 +188,9 @@ public class Com extends javax.swing.JFrame {
 
     public Com() {
         initComponents();
-        Inicializa();
+        colors();
         cosasVisuales();
         Inicial();
-
     }
 
     private void Inicial() {
@@ -242,6 +245,7 @@ public class Com extends javax.swing.JFrame {
         jTable1.setModel(modeloTabla);
         mensajes.setText("");
         lexico.setText("");
+        CodigoIntermedio.setText("");
         tokenEsperados.clear();
         tablaSimbolos.clear();
         pilaSemantica.clear();
@@ -254,9 +258,13 @@ public class Com extends javax.swing.JFrame {
         banError = false;
         banProduccion = false;
         banIf = false;
+        banFor = false;
         estadoPila = "";
         errorMsg = "";
+        valorExpresion = "";
+        codigoIntermedio = "";
         estadoSintactico = 0;
+        variable = 0;
         linea = 1;
         this.analisisLexico();
     }
@@ -278,18 +286,18 @@ public class Com extends javax.swing.JFrame {
             while (true) { // Iteramos a través de cada token producido por el lexer hasta que no haya más
                 token = lexer.yylex();
                 if (token == null) {
+                    this.AnalizadorSintactico("$");
                     break;
                 }
                 if(token.getLine() > linea)
                     lexico.setText(lexico.getText() + " \n");
                 linea = token.getLine();
-                // nota en caso de encontrar un error manda a llamar el metodo
                 if (token.getLexicalComp().equals("ERROR"))
                 {
                     this.Error("Lexico", token.getLine(), token.getLexeme());
                     break;
                 }
-               if(token.getLexicalComp().equals("pReservada") || token.getLexicalComp().equals("tipoDa"))
+                if(token.getLexicalComp().equals("pReservada") || token.getLexicalComp().equals("tipoDa"))
                 {
                     switch(token.getLexeme())
                     {
@@ -331,7 +339,7 @@ public class Com extends javax.swing.JFrame {
                     // Añadimos cada token a la lista de tokens
                     this.AnalizadorSintactico(token.getLexicalComp());
                 }
-               if(banError)
+                if(banError)
                     break;
             }
         } catch (FileNotFoundException ex) {
@@ -342,9 +350,9 @@ public class Com extends javax.swing.JFrame {
             System.out.println("Error al escribir en el archivo... " + ex.getMessage());
         }
     }
-    
     public void AnalizadorSintactico(String token)
     {
+        System.out.println(pilaSintactica.toString());
         do
         {
             switch(pilaSintactica.peek().charAt(0))
@@ -389,15 +397,47 @@ public class Com extends javax.swing.JFrame {
                        this.AnalizadorSemantico();
                 for(String var : terminoExpresion)
                     if(pilaSintactica.peek().equals(var))
+                    {
                         this.AccionExpresion();
+                        if(pilaSintactica.peek().equals("I102"))
+                        {
+                            banFor = false;
+                            codigoIntermedio += "if(!vf1)\n\tgoto end_For;\n";
+                            variable = 0;
+                        }
+                    }
+                if(pilaSintactica.peek().equals("I80"))
+                    codigoIntermedio += "printf( " + valorExpresion + " );\n";
+                if(pilaSintactica.peek().equals("I81"))
+                    codigoIntermedio += "scanf( " + valorExpresion + " );\n";
+                if(pilaSintactica.peek().equals("I29"))
+                    banFor = true;
                 if(pilaSintactica.peek().equals("I6"))
                     banIf = true;
                 if(banIf)
                     if(pilaSintactica.peek().equals("I35"))
                     {
                         this.AccionExpresion();
+                        codigoIntermedio += "if(!v1)\n\tgoto Else;\n";
+                        variable = 0;
                         banIf = false;
                     }
+                if(pilaSintactica.peek().equals("I84"))
+                {
+                    
+                    if(banEndFor)
+                    {
+                        codigoIntermedio += "vf1 = " + valorExpresion + ";\nvf2 = 1;\nvf1 = vf1 " + incremento + " vf2;\ngoto FOR;\nend_For:\n";
+                        CodigoIntermedio.setText( codigoIntermedio);
+                        banEndFor = false;
+                    }
+                    else
+                        codigoIntermedio += "\tgoto end_IF;\nElse:\n\tgoto end_IF;\nend_IF:\n";
+                }
+                if(pilaSintactica.peek().equals("I107"))
+                    incremento = "-";
+                if(pilaSintactica.peek().equals("I108"))
+                    incremento = "+";
                 if(pilaSintactica.peek().equals("I6") || pilaSintactica.peek().equals("I100"))
                     banCondicional = true;
                 modeloTabla.addRow(new Object[]{pilaSintactica.toString(),token,"Desplasar",this.token.getLine()});
@@ -413,6 +453,7 @@ public class Com extends javax.swing.JFrame {
     @SuppressWarnings("empty-statement")
     public void Produccion(String token)
     {
+        
         if(!token.equals("P0"))
         {
             modeloTabla.addRow(new Object[]{pilaSintactica.toString(),token,"Produccion",linea});
@@ -449,7 +490,20 @@ public class Com extends javax.swing.JFrame {
         if(repetida)
         {
             tablaSimbolos.put(token.getLexeme(), tipoDato);
-            
+            switch(tablaSimbolos.get(token.getLexeme()))
+            {
+                case 0:
+                    codigoIntermedio += "int " + token.getLexeme() + ";\n";
+                    break;
+                case 1:
+                    codigoIntermedio += "float " + token.getLexeme() + ";\n";
+                    break;
+                case 2:
+                    codigoIntermedio += "char " + token.getLexeme() + ";\n";
+                    break;
+                case 3:
+                    codigoIntermedio += "boolean " + token.getLexeme() + ";\n";
+            }
         }
         else
             this.Error("Semantico", token.getLine(), "No se pueden declarar identificadores iguales");
@@ -463,6 +517,7 @@ public class Com extends javax.swing.JFrame {
                     banTabla = true;
         if(banTabla)
         {
+            valorExpresion = token.getLexeme();
             datoAsignacion = tablaSimbolos.get(token.getLexeme());
         }
         else
@@ -471,7 +526,7 @@ public class Com extends javax.swing.JFrame {
     public void AnalizadorSemantico()
     {
         boolean banIdentificador = false;
-        String operadoresLogicos[] = {"<",">","<=",">=","!","!=","==","&&","||"};
+        String operadoresLogicos[] = {"<",">","<=",">=","?","!=","==","&&","||"};
         if(token.getLexicalComp().equals("id"))
         {
             for(String id : tablaSimbolos.keySet())
@@ -480,13 +535,25 @@ public class Com extends javax.swing.JFrame {
             if(banIdentificador)
             {
                 pilaSemantica.push(tablaSimbolos.get(token.getLexeme()));
+                variable++;
+                if(!banFor)
+                    codigoIntermedio += "v" + variable + " = " + token.getLexeme() + ";\n";
+                else
+                    codigoIntermedio += "vf" + variable + " = " + token.getLexeme() + ";\n";
             }
             else
                 this.Error("Semantico", token.getLine(), "No se puede realizar una operacion con un identificador no declarado");
         }
         else
             if(token.getLexicalComp().equals("num"))
+            {
                 pilaSemantica.push(0);
+                variable++;
+                if(!banFor)
+                    codigoIntermedio += "v" + variable + " = " + token.getLexeme() + ";\n";
+                else
+                    codigoIntermedio += "vf" + variable + " = " + token.getLexeme() + ";\n";
+            }
             else
                 if(token.getLexicalComp().equals("char"))
                     pilaSemantica.push(2);
@@ -495,10 +562,16 @@ public class Com extends javax.swing.JFrame {
                         pilaSemantica.push(3);
                     else
                         if(token.getLexicalComp().equals("+") || token.getLexicalComp().equals("-"))
+                        {
                             this.AccionesOperadores(0);
+                            operadores.push(token.getLexicalComp());
+                        }
                         else
                             if(token.getLexicalComp().equals("*") || token.getLexicalComp().equals("/"))
+                            {
                                 this.AccionesOperadores(1);
+                                operadores.push(token.getLexicalComp());
+                            }
                             else
                                 if(token.getLexicalComp().equals("("))
                                     this.AccionesOperadores(2);
@@ -508,7 +581,10 @@ public class Com extends javax.swing.JFrame {
                                     else
                                         for(String var : operadoresLogicos)
                                             if(token.getLexicalComp().equals(var))
+                                            {
                                                 this.AccionesOperadores(4);
+                                                operadores.push(token.getLexicalComp());
+                                            }
     }
     public void AccionesOperadores(int valor)
     {
@@ -553,6 +629,11 @@ public class Com extends javax.swing.JFrame {
         
         if(resultado != -1)
         {
+            if(!banFor)
+                codigoIntermedio += "v" + (variable - 1) + " = v" + (variable - 1) + " " + operadores.pop() + " v" + variable + ";\n";
+            else
+                codigoIntermedio += "vf" + (variable - 1) + " = vf" + (variable - 1) + " " + operadores.pop() + " vf" + variable + ";\n";
+            variable--;
             pilaSemantica.push(resultado);
         }
         else
@@ -572,13 +653,25 @@ public class Com extends javax.swing.JFrame {
         else
             if(datoAsignacion != temp)
                 this.Error("Semantico", token.getLine(), "No se puede realizar una asignacion con diferentes tipos de datos");
+            else
+            {
+                if(!pilaSintactica.peek().equals("I100"))
+                    codigoIntermedio += valorExpresion + " = " + "v1;\n";
+                else
+                {
+                    codigoIntermedio += valorExpresion + " = vf1;\nFOR:\n";
+                    banEndFor = true;
+                }
+                variable = 0;
+                CodigoIntermedio.setText(codigoIntermedio);
+            }
     }
     public void Error(String tipoError, int numeroLinea, String token)
     {
         switch(tipoError)
         {
             case "Lexico":
-                errorMsg += "Error Lexico linea " + numeroLinea + ": token [ " + token + " ] ";
+                errorMsg += "Error " + tipoError + " linea " + numeroLinea + ": token [ " + token + " ] ";
                 this.ErrorLexico();
                 break;
             case "Sintactico":
@@ -614,7 +707,7 @@ public class Com extends javax.swing.JFrame {
         for(int x = 0; x < 38; x++)
             if(!tablaSintactica[Integer.parseInt(estadoPila)][x].equals("-1"))
                 tokenEsperados.addElement(encabezadosColumnas[x]);
-         errorMsg += " Se resivio " + token + " se esperaba " + String.valueOf(tokenEsperados) + "\n";        
+        errorMsg += " Se resivio " + token + " se esperaba " + String.valueOf(tokenEsperados) + "\n";
     }
     @SuppressWarnings("unchecked")
     // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
@@ -625,6 +718,8 @@ public class Com extends javax.swing.JFrame {
         mensajes = new javax.swing.JTextPane();
         jScrollPane4 = new javax.swing.JScrollPane();
         jTable1 = new javax.swing.JTable();
+        jScrollPane5 = new javax.swing.JScrollPane();
+        CodigoIntermedio = new javax.swing.JTextArea();
         jScrollPane1 = new javax.swing.JScrollPane();
         escritura = new javax.swing.JTextPane();
         jScrollPane2 = new javax.swing.JScrollPane();
@@ -648,7 +743,7 @@ public class Com extends javax.swing.JFrame {
 
         jScrollPane3.setViewportView(mensajes);
 
-        jTabbedPane1.addTab("Errores", jScrollPane3);
+        jTabbedPane1.addTab("Sintactico y Errores", jScrollPane3);
 
         jTable1.setModel(new javax.swing.table.DefaultTableModel(
             new Object [][] {
@@ -662,12 +757,18 @@ public class Com extends javax.swing.JFrame {
 
         jTabbedPane1.addTab("Pila", jScrollPane4);
 
+        CodigoIntermedio.setColumns(20);
+        CodigoIntermedio.setRows(5);
+        jScrollPane5.setViewportView(CodigoIntermedio);
+
+        jTabbedPane1.addTab("Codigo Intermedio", jScrollPane5);
+
         jScrollPane1.setViewportView(escritura);
 
         jScrollPane2.setViewportView(lexico);
 
         bRun.setIcon(new javax.swing.ImageIcon(getClass().getResource("/img/boton-de-play.png"))); // NOI18N
-        bRun.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
+        bRun.setCursor(new java.awt.Cursor(java.awt.Cursor.DEFAULT_CURSOR));
         bRun.setRolloverIcon(new javax.swing.ImageIcon(getClass().getResource("/img/jugar (1).png"))); // NOI18N
         bRun.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
@@ -676,7 +777,7 @@ public class Com extends javax.swing.JFrame {
         });
 
         bNuevo.setIcon(new javax.swing.ImageIcon(getClass().getResource("/img/agregar-archivo.png"))); // NOI18N
-        bNuevo.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
+        bNuevo.setCursor(new java.awt.Cursor(java.awt.Cursor.DEFAULT_CURSOR));
         bNuevo.setRolloverIcon(new javax.swing.ImageIcon(getClass().getResource("/img/agregar-archivo (1).png"))); // NOI18N
         bNuevo.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
@@ -685,7 +786,7 @@ public class Com extends javax.swing.JFrame {
         });
 
         bAbrir.setIcon(new javax.swing.ImageIcon(getClass().getResource("/img/caja (1).png"))); // NOI18N
-        bAbrir.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
+        bAbrir.setCursor(new java.awt.Cursor(java.awt.Cursor.DEFAULT_CURSOR));
         bAbrir.setRolloverIcon(new javax.swing.ImageIcon(getClass().getResource("/img/caja (2).png"))); // NOI18N
         bAbrir.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
@@ -694,7 +795,7 @@ public class Com extends javax.swing.JFrame {
         });
 
         bGuardar.setIcon(new javax.swing.ImageIcon(getClass().getResource("/img/disquete (1).png"))); // NOI18N
-        bGuardar.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
+        bGuardar.setCursor(new java.awt.Cursor(java.awt.Cursor.DEFAULT_CURSOR));
         bGuardar.setRolloverIcon(new javax.swing.ImageIcon(getClass().getResource("/img/salvar (1).png"))); // NOI18N
         bGuardar.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
@@ -807,10 +908,15 @@ public class Com extends javax.swing.JFrame {
 
     private void bRunActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_bRunActionPerformed
         StyledDocument doc = escritura.getStyledDocument();
+
+        
+        
+        
         if (escritura.getText().isEmpty()){
          mensajes.setText("No hay nada que analizar");
+        
         }else 
-        Inicializa();
+            Inicializa();
     }//GEN-LAST:event_bRunActionPerformed
 
     private void bNuevoActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_bNuevoActionPerformed
@@ -844,21 +950,18 @@ public class Com extends javax.swing.JFrame {
     }//GEN-LAST:event_jMenuItem2ActionPerformed
 
     private void jMenuItem4ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jMenuItem4ActionPerformed
-//        pila.clear();
+ 
+
         borrarComponentes();
         analisisLexico();
-//        llenarJPnaleTokens();
-//        analisisLexicoEerr();
-//        AnalisisSintacticoInicioPila();
-//        llenarPila();
-        //imprimirConsola();        // TODO add your handling code here:
+   
     }//GEN-LAST:event_jMenuItem4ActionPerformed
 
     public void cosasVisuales() {
 
     }
 
-    
+//    
 //    public void noDuplicados(){
 //    
 //    String[] lines = mensajes.getText().split("\n");
@@ -869,12 +972,23 @@ public class Com extends javax.swing.JFrame {
 //    
 //    }
     
+    /// AQUI ES PARA EL CODIGO DE FERNANDO
+    
+    
+    
     private void borrarComponentes() {
 
         lexico.setText("");
-        mensajes.setText("");
         
+        mensajes.setText("");
+     
     }
+    
+    
+     // ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    // COLOREAR LAS COSAS
+    // ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    //METODO PARA ENCONTRAR LAS ULTIMAS CADENAS
     private int findLastNonWordChar(String text, int index) {
         while (--index >= 0) {
             //  \\W = [A-Za-Z0-9]
@@ -960,6 +1074,11 @@ public class Com extends javax.swing.JFrame {
 
     }
 
+    // ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+    
+    
+
     public static void main(String args[]) {
 
         java.awt.EventQueue.invokeLater(new Runnable() {
@@ -970,6 +1089,7 @@ public class Com extends javax.swing.JFrame {
     }
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
+    private javax.swing.JTextArea CodigoIntermedio;
     private javax.swing.JButton bAbrir;
     private javax.swing.JButton bGuardar;
     private javax.swing.JButton bNuevo;
@@ -989,6 +1109,7 @@ public class Com extends javax.swing.JFrame {
     private javax.swing.JScrollPane jScrollPane2;
     private javax.swing.JScrollPane jScrollPane3;
     private javax.swing.JScrollPane jScrollPane4;
+    private javax.swing.JScrollPane jScrollPane5;
     private javax.swing.JTabbedPane jTabbedPane1;
     private javax.swing.JTable jTable1;
     private javax.swing.JTextPane lexico;

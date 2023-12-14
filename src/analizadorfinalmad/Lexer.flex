@@ -36,10 +36,12 @@ comillas=[\"]+
 comillasS=[']+
 simbolos=[\!,#,$,%,&,\(,\),*,\+,\,,\-,\.,/,:,;,<,=,>,?,@,\[,\],\^,_,`,{,|,},¿]+
 ReservadasP= read|print|if|for|VERDADERO|FALSO|var
+simbolos=[;,+,-,*,/,(,)]+
+ReservadasP= read|print|if|for|VERDADERO|FALSO|var
 
 
 /*Tipos de Datos*/
-ReservadasD= Entero|Bool|Char|Cadena
+ReservadasD= Entero|Flotante|Char|Bool
 
 /* Identificador */
 Letra = [A-Za-zÑñ_ÁÉÍÓÚáéíóúÜü]
@@ -101,8 +103,8 @@ CaracterE = "'" [^'\n\\']* "'"
 [<][=] { return token(yytext(), "<=", yyline, yycolumn); }
 [>][=] { return token(yytext(), ">=", yyline, yycolumn); }
 
-[&][&] { return token(yytext(), "@", yyline, yycolumn); }
-[|][|] { return token(yytext(), "%", yyline, yycolumn); }
+[&][&] { return token(yytext(), "&&", yyline, yycolumn); }
+[|][|] { return token(yytext(), "||", yyline, yycolumn); }
 [!] { return token(yytext(), "?", yyline, yycolumn); }
 
 [$] { return token(yytext(), "$", yyline, yycolumn);}
