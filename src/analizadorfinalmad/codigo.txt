@@ -7,3 +7,16 @@ print( y )
 for(i=10, i < 10, i++){
 print( x )
 }.
+
+
+var Entero x,i;
+var Flotante y;
+read = x;
+read = y;
+y = x + y;
+if  x == y {
+print( y )
+}
+for(i=10, i < 10, i++){
+print( x )
+}.

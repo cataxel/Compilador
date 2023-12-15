@@ -412,16 +412,16 @@ public class Com extends javax.swing.JFrame {
                     }
                     switch (valor) {
                                 case 0:
-                                    codigoIntermedio += "printf(\" [%d] \" ,&" + valorExpresion + " );\n";
+                                    codigoIntermedio += "printf(\" [%d] \"," + valorExpresion + " );\n";
                                     break;
                                 case 1:
-                                    codigoIntermedio += "printf(\" [%f] \" ,&" + valorExpresion + " );\n";
+                                    codigoIntermedio += "printf(\" [%f] \"," + valorExpresion + " );\n";
                                     break;
                                 case 2:
-                                    codigoIntermedio += "printff(\" [%c] \" ,&" + valorExpresion + " );\n";
+                                    codigoIntermedio += "printff(\" [%c] \"," + valorExpresion + " );\n";
                                     break;
                                 case 3:
-                                    codigoIntermedio += "printf(\" [%d] \" ,&" + valorExpresion + " );\n";
+                                    codigoIntermedio += "printf(\" [%d] \"," + valorExpresion + " );\n";
                                     break;
                                 default:
                                     break;
