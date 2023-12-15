@@ -405,22 +405,23 @@ public class Com extends javax.swing.JFrame {
                     }
                 if(pilaSintactica.peek().equals("I80")){
                     for (String string : tablaSimbolos.keySet()) {
-                        if(valorExpresion.equals(string))
+                        if(valorExpresion.equals(string)){
                             valor = tablaSimbolos.get(string);
                             break;
+                        }
                     }
                     switch (valor) {
                                 case 0:
-                                    codigoIntermedio += "printf(\" %d \" ," + valorExpresion + " );\n";
+                                    codigoIntermedio += "printf(\" [%d] \" ,&" + valorExpresion + " );\n";
                                     break;
                                 case 1:
-                                    codigoIntermedio += "printf(\" %f \" ," + valorExpresion + " );\n";
+                                    codigoIntermedio += "printf(\" [%f] \" ,&" + valorExpresion + " );\n";
                                     break;
                                 case 2:
-                                    codigoIntermedio += "printff(\" %c \" ," + valorExpresion + " );\n";
+                                    codigoIntermedio += "printff(\" [%c] \" ,&" + valorExpresion + " );\n";
                                     break;
                                 case 3:
-                                    codigoIntermedio += "printf(\" %d \" ," + valorExpresion + " );\n";
+                                    codigoIntermedio += "printf(\" [%d] \" ,&" + valorExpresion + " );\n";
                                     break;
                                 default:
                                     break;
@@ -428,22 +429,23 @@ public class Com extends javax.swing.JFrame {
                 }
                 if(pilaSintactica.peek().equals("I81")){
                     for (String string : tablaSimbolos.keySet()) {
-                        if(valorExpresion.equals(string))
+                        if(valorExpresion.equals(string)){
                             valor = tablaSimbolos.get(string);
                             break;
+                        }
                     }
                     switch (valor) {
                                 case 0:
-                                    codigoIntermedio += "scanf(\" %d \" ," + valorExpresion + " );\n";
+                                    codigoIntermedio += "scanf(\" %d \" ,&" + valorExpresion + " );\n";
                                     break;
                                 case 1:
-                                    codigoIntermedio += "scanf(\" %f \" ," + valorExpresion + " );\n";
+                                    codigoIntermedio += "scanf(\" %f \" ,&" + valorExpresion + " );\n";
                                     break;
                                 case 2:
-                                    codigoIntermedio += "scanf(\" %c \" ," + valorExpresion + " );\n";
+                                    codigoIntermedio += "scanf(\" %c \" ,&" + valorExpresion + " );\n";
                                     break;
                                 case 3:
-                                    codigoIntermedio += "scanf(\" %d \" ," + valorExpresion + " );\n";
+                                    codigoIntermedio += "scanf(\" %d \" ,&" + valorExpresion + " );\n";
                                     break;
                                 default:
                                     break;

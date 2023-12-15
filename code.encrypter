@@ -1,6 +1,8 @@
-var Entero x,y,i;
+var Entero x,i;
+var Flotante y;
 read = x;
 read = y;
+y = x + y;
 if  x == y {
 print( y )
 }
