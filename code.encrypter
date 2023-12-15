@@ -1,4 +1,9 @@
-var Entero a,b,c;
-for (a = 23, b<=c, a++) {
-a = b / c;
+var Entero x,y,i;
+read = x;
+read = y;
+if  x == y {
+print( y )
+}
+for(i=10, i < 10, i++){
+print( x )
 }.

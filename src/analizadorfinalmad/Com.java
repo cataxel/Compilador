@@ -142,7 +142,7 @@ public class Com extends javax.swing.JFrame {
    /*q78*/{  "P8",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "P8",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1"},
    /*q79*/{  "-1",  "-1", "P35", "P35",  "-1",  "-1",  "-1",  "-1", "P35",  "-1", "I26", "P35", "P35", "P35", "P35", "P35", "P35", "P35", "P35", "P35",  "-1", "I21",  "-1",  "-1",  "-1",  "-1","I109","I110", "I23", "I24", "I25",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1", "I98",  "-1", "I20",  "-1", "I22",  "-1"},
    /*q80*/{ "P11",  "-1",  "-1",  "-1",  "-1",  "I6",  "I7",  "-1",  "-1", "P11",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "I5",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "I9",  "I8",  "-1",  "-1",  "-1",  "-1","I113",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1"},
-   /*q81*/{ "P11",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1", "P11",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "I5",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "I9",  "I8",  "-1",  "-1",  "-1",  "-1","I114",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1"},
+   /*q81*/{ "P11",  "-1",  "-1",  "-1",  "-1",  "I6",  "I7",  "-1",  "-1", "P11",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "I5",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "I9",  "I8",  "-1",  "-1",  "-1",  "-1","I114",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1"},
    /*q82*/{  "-1",  "-1",  "P5", "I60",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1", "I99",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1"},
    /*q83*/{  "P6",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "P6",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1"},
    /*q84*/{ "P15",  "-1",  "-1",  "-1",  "-1", "P15", "P15",  "-1",  "-1", "P15",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1", "P15",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1", "P15", "P15",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1",  "-1"},
@@ -369,6 +369,7 @@ public class Com extends javax.swing.JFrame {
     }
     
     @SuppressWarnings("empty-statement")
+    int valor;
     public void DesplasarEstado(String token)
     {
         String estadosId[] = {"I5","I104","I57","I58","I56"};
@@ -402,10 +403,52 @@ public class Com extends javax.swing.JFrame {
                             variable = 0;
                         }
                     }
-                if(pilaSintactica.peek().equals("I80"))
-                    codigoIntermedio += "printf( " + valorExpresion + " );\n";
-                if(pilaSintactica.peek().equals("I81"))
-                    codigoIntermedio += "scanf( " + valorExpresion + " );\n";
+                if(pilaSintactica.peek().equals("I80")){
+                    for (String string : tablaSimbolos.keySet()) {
+                        if(valorExpresion.equals(string))
+                            valor = tablaSimbolos.get(string);
+                            break;
+                    }
+                    switch (valor) {
+                                case 0:
+                                    codigoIntermedio += "printf(\" %d \" ," + valorExpresion + " );\n";
+                                    break;
+                                case 1:
+                                    codigoIntermedio += "printf(\" %f \" ," + valorExpresion + " );\n";
+                                    break;
+                                case 2:
+                                    codigoIntermedio += "printff(\" %c \" ," + valorExpresion + " );\n";
+                                    break;
+                                case 3:
+                                    codigoIntermedio += "printf(\" %d \" ," + valorExpresion + " );\n";
+                                    break;
+                                default:
+                                    break;
+                            }
+                }
+                if(pilaSintactica.peek().equals("I81")){
+                    for (String string : tablaSimbolos.keySet()) {
+                        if(valorExpresion.equals(string))
+                            valor = tablaSimbolos.get(string);
+                            break;
+                    }
+                    switch (valor) {
+                                case 0:
+                                    codigoIntermedio += "scanf(\" %d \" ," + valorExpresion + " );\n";
+                                    break;
+                                case 1:
+                                    codigoIntermedio += "scanf(\" %f \" ," + valorExpresion + " );\n";
+                                    break;
+                                case 2:
+                                    codigoIntermedio += "scanf(\" %c \" ," + valorExpresion + " );\n";
+                                    break;
+                                case 3:
+                                    codigoIntermedio += "scanf(\" %d \" ," + valorExpresion + " );\n";
+                                    break;
+                                default:
+                                    break;
+                            }
+                }    
                 if(pilaSintactica.peek().equals("I29"))
                     banFor = true;
                 if(pilaSintactica.peek().equals("I6"))
@@ -423,7 +466,7 @@ public class Com extends javax.swing.JFrame {
                     
                     if(banEndFor)
                     {
-                        codigoIntermedio += "vf1 = " + valorExpresion + ";\nvf2 = 1;\nvf1 = vf1 " + incremento + " vf2;\ngoto FOR;\nend_For:\n";
+                        codigoIntermedio += "vf1 = " + valorExpresion + "; \nvf2 = 1; \nvf1 = vf1 " + incremento + " vf2; \ngoto FOR;\nend_For:\n";
                         CodigoIntermedio.setText( codigoIntermedio);
                         banEndFor = false;
                     }
